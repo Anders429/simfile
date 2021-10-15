@@ -1,1 +1,3 @@
-pub struct Song;
+pub struct Song {
+    pub title: Option<String>,
+}
