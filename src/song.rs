@@ -1,3 +1,8 @@
+//! Uniform representation of song simfiles.
+//!
+//! This module provides a [`Song`] type for uniformly representing a song simfile. This allows for
+//! reading, manipulating, and writing simfiles between formats interchangeably.
+
 /// Situations in which a song is selectable.
 ///
 /// Not all of these options are supported in every simfile format. The `Roulette`, `ExtraStage`,
