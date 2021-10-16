@@ -1,0 +1,4 @@
+[feature_log_coverage]
+features = "log"
+
+[feature_no_log_coverage]
