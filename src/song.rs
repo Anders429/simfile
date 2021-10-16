@@ -1,3 +1,8 @@
+//! Uniform representation of song simfiles.
+//!
+//! This module provides a [`Song`] type for uniformly representing a song simfile. This allows for
+//! reading, manipulating, and writing simfiles between formats interchangeably.
+
 /// Situations in which a song is selectable.
 ///
 /// Not all of these options are supported in every simfile format. The `Roulette`, `ExtraStage`,
@@ -29,9 +34,15 @@ pub enum Selectable {
     OnRemainingStages(u8),
 }
 
+/// A song simfile.
+///
+/// This struct strives to be a universal representation of a song simfile.
 pub struct Song {
+    /// The song's primary title.
     pub title: Option<String>,
+    /// The song's subtitle.
     pub subtitle: Option<String>,
+    /// The song's artist.
     pub artist: Option<String>,
 
     /// Selectability during song selection.
