@@ -33,8 +33,11 @@ pub enum Selectable {
 ///
 /// This struct strives to be a universal representation of a song simfile.
 pub struct Song {
+    /// The song's primary title.
     pub title: Option<String>,
+    /// The song's subtitle.
     pub subtitle: Option<String>,
+    /// The song's artist.
     pub artist: Option<String>,
 
     /// Selectability during song selection.
