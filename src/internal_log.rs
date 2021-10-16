@@ -78,7 +78,7 @@ mod tests {
     #[cfg_attr(not(feature = "log"), ignore)]
     fn trace_log_on() {
         testing_logger::setup();
-        
+
         internal_log::trace!("foo");
 
         testing_logger::validate(|captured_logs| {
@@ -104,7 +104,7 @@ mod tests {
     #[cfg_attr(not(feature = "log"), ignore)]
     fn debug_log_on() {
         testing_logger::setup();
-        
+
         internal_log::debug!("foo");
 
         testing_logger::validate(|captured_logs| {
@@ -130,7 +130,7 @@ mod tests {
     #[cfg_attr(not(feature = "log"), ignore)]
     fn info_log_on() {
         testing_logger::setup();
-        
+
         internal_log::info!("foo");
 
         testing_logger::validate(|captured_logs| {
@@ -156,7 +156,7 @@ mod tests {
     #[cfg_attr(not(feature = "log"), ignore)]
     fn warn_log_on() {
         testing_logger::setup();
-        
+
         internal_log::warn!("foo");
 
         testing_logger::validate(|captured_logs| {
@@ -182,7 +182,7 @@ mod tests {
     #[cfg_attr(not(feature = "log"), ignore)]
     fn error_log_on() {
         testing_logger::setup();
-        
+
         internal_log::error!("foo");
 
         testing_logger::validate(|captured_logs| {
