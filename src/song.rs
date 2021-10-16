@@ -29,6 +29,9 @@ pub enum Selectable {
     OnRemainingStages(u8),
 }
 
+/// A song simfile.
+///
+/// This struct strives to be a universal representation of a song simfile.
 pub struct Song {
     pub title: Option<String>,
     pub subtitle: Option<String>,
