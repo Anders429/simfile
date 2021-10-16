@@ -25,6 +25,7 @@ jobs:
     - uses: actions-rs/install@v0.1
       with:
         crate: cargo-all-features
+        use-tool-cache: true
     - uses: actions-rs/cargo@v1
       with:
         command: test-all-features
