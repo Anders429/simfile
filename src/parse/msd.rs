@@ -38,19 +38,189 @@
 /// for example, the separate parameters of the `#BACKGROUND` `dwi` tag. Consumers should only use
 /// the `Untagged` variant if that is what they are explicitly expecting.
 #[derive(Debug, PartialEq)]
-pub(crate) enum ParameterList<'a> {
+pub(crate) enum ParameterList {
     /// A tagged parameter list.
     ///
     /// This is a list of parameters beginning with a `#` character.
-    Tagged(Vec<&'a str>),
+    Tagged(Vec<String>),
     /// An untagged parameter list.
     ///
     /// This is a list of parameters not beginning with a `#` character.
-    Untagged(Vec<&'a str>),
+    Untagged(Vec<String>),
 }
 
-pub(crate) fn parse<'a>(input: &'a str) -> impl Iterator<Item = ParameterList<'a>> {
-    vec![].into_iter()
+pub(crate) fn parse(input: &str) -> impl Iterator<Item = ParameterList> {
+    enum BlockState {
+        UntaggedParameterList,
+        TaggedParameterList,
+    }
+
+    enum ParsingState {
+        FindingParameter,
+        InParameter(String),
+    }
+
+    enum CommentState {
+        None,
+        InComment,
+    }
+
+    enum PrevCharState {
+        None,
+        EnteringComment,
+        Escaping,
+    }
+
+    enum LineState {
+        Beginning,
+        Middle,
+    }
+
+    let mut result = Vec::new();
+    let mut parameter = String::new();
+    let mut list = Vec::new();
+
+    let mut block_state = BlockState::UntaggedParameterList;
+    let mut parsing_state = ParsingState::FindingParameter;
+    let mut comment_state = CommentState::None;
+    let mut prev_char_state = PrevCharState::None;
+    let mut line_state = LineState::Beginning;
+    for c in input.chars() {
+        match comment_state {
+            CommentState::None => {
+                match c {
+                    '#' => {
+                        todo!("Account for escapes here and in other blocks.");
+                        if list.is_empty() {
+                            todo!();
+                        } else {
+                            match line_state {
+                                LineState::Beginning => {
+                                    // Finish the previous parameter list.
+                                    if !parameter.is_empty() {
+                                        list.push(parameter);
+                                        parameter = String::new();
+                                        parsing_state = ParsingState::FindingParameter;
+                                    }
+                                    if !list.is_empty() {
+                                        match block_state {
+                                            BlockState::TaggedParameterList => {
+                                                result.push(ParameterList::Tagged(list));
+                                            }
+                                            BlockState::UntaggedParameterList => {
+                                                result.push(ParameterList::Untagged(list));
+                                            }
+                                        }
+                                        list = Vec::new();
+                                    }
+                                    block_state = BlockState::TaggedParameterList;
+                                }
+                                LineState::Middle => {
+                                    todo!();
+                                }
+                            }
+                        }
+                        prev_char_state = PrevCharState::None;
+                    }
+                    ':' => {
+                        list.push(parameter);
+                        parameter = String::new();
+                        parsing_state = ParsingState::FindingParameter;
+                        prev_char_state = PrevCharState::None;
+                    }
+                    ';' => {
+                        list.push(parameter);
+                        parameter = String::new();
+                        parsing_state = ParsingState::FindingParameter;
+                        match block_state {
+                            BlockState::TaggedParameterList => {
+                                result.push(ParameterList::Tagged(list));
+                            }
+                            BlockState::UntaggedParameterList => {
+                                result.push(ParameterList::Untagged(list));
+                            }
+                        }
+                        list = Vec::new();
+                        block_state = BlockState::UntaggedParameterList;
+                        prev_char_state = PrevCharState::None;
+                    }
+                    '/' => {
+                        match prev_char_state {
+                            PrevCharState::EnteringComment => {
+                                comment_state = CommentState::InComment;
+                                prev_char_state = PrevCharState::None;
+                            }
+                            PrevCharState::Escaping | PrevCharState::None => {
+                                prev_char_state = PrevCharState::EnteringComment;
+                            }
+                        }
+                    }
+                    '\\' => {
+                        match prev_char_state {
+                            PrevCharState::Escaping => {
+                                parameter.push(c);
+                                prev_char_state = PrevCharState::None;
+                            }
+                            PrevCharState::EnteringComment | PrevCharState::None => {
+                                prev_char_state = PrevCharState::Escaping;
+                            }
+                        }
+                    }
+                    _ => {
+                        match parsing_state {
+                            ParsingState::FindingParameter => {
+                                match prev_char_state {
+                                    PrevCharState::None | PrevCharState::Escaping => {
+                                        if !c.is_whitespace() {
+                                            parsing_state = ParsingState::InParameter(String::new());
+                                            parameter.push(c);
+                                        }
+                                    }
+                                    PrevCharState::EnteringComment => {
+                                        parameter.push('/');
+                                        if c.is_whitespace() {
+                                            parsing_state = ParsingState::InParameter(c.to_string());
+                                        } else {
+                                            parsing_state = ParsingState::InParameter(String::new());
+                                            parameter.push(c);
+                                        }
+                                    }
+                                }
+                            }
+                            ParsingState::InParameter(ref mut buffer) => {
+                                if c.is_whitespace() {
+                                    buffer.push(c);
+                                } else {
+                                    parameter.push_str(buffer);
+                                    parameter.push(c);
+                                    *buffer = String::new();
+                                }
+                            }
+                        }
+                        prev_char_state = PrevCharState::None;
+                    }
+                }
+
+                match c {
+                    '\n' => {
+                        line_state = LineState::Beginning;
+                    }
+                    _ => {
+                        if !c.is_whitespace() {
+                            line_state = LineState::Middle;
+                        }
+                    }
+                }
+            }
+            CommentState::InComment => {
+                if c == '\n' {
+                    comment_state = CommentState::None;
+                }
+            }
+        }
+    }
+
+    result.into_iter()
 }
 
 #[cfg(test)]
@@ -69,14 +239,14 @@ mod tests {
 
     #[test]
     fn tagged_parameter_list_single() {
-        itertools::assert_equal(parse("#foo;"), [ParameterList::Tagged(vec!["foo"])]);
+        itertools::assert_equal(parse("#foo;"), [ParameterList::Tagged(vec!["foo".to_owned()])]);
     }
 
     #[test]
     fn tagged_parameter_list_many() {
         itertools::assert_equal(
             parse("#foo:bar:baz:qux;"),
-            [ParameterList::Tagged(vec!["foo", "bar", "baz", "qux"])],
+            [ParameterList::Tagged(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned(), "qux".to_owned()])],
         );
     }
 
@@ -84,7 +254,7 @@ mod tests {
     fn tagged_parameter_list_two_lines() {
         itertools::assert_equal(
             parse("#foo:\nbar;"),
-            [ParameterList::Tagged(vec!["foo", "bar"])],
+            [ParameterList::Tagged(vec!["foo".to_owned(), "bar".to_owned()])],
         );
     }
 
@@ -92,7 +262,7 @@ mod tests {
     fn tagged_parameter_list_with_comment() {
         itertools::assert_equal(
             parse("#foo://comment\nbar;"),
-            [ParameterList::Tagged(vec!["foo", "bar"])],
+            [ParameterList::Tagged(vec!["foo".to_owned(), "bar".to_owned()])],
         );
     }
 
@@ -100,13 +270,13 @@ mod tests {
     fn tagged_parameter_list_escaped_characters() {
         itertools::assert_equal(
             parse(r"#\#\;\:/\/;"),
-            [ParameterList::Tagged(vec!["#;://"])],
+            [ParameterList::Tagged(vec!["#;://".to_owned()])],
         );
     }
 
     #[test]
     fn tagged_parameter_list_elided_semicolon_at_end_of_input() {
-        itertools::assert_equal(parse("#foo"), [ParameterList::Tagged(vec!["foo"])]);
+        itertools::assert_equal(parse("#foo"), [ParameterList::Tagged(vec!["foo".to_owned()])]);
     }
 
     #[test]
@@ -114,15 +284,15 @@ mod tests {
         itertools::assert_equal(
             parse("#foo\n#bar;"),
             [
-                ParameterList::Tagged(vec!["foo"]),
-                ParameterList::Tagged(vec!["bar"]),
+                ParameterList::Tagged(vec!["foo".to_owned()]),
+                ParameterList::Tagged(vec!["bar".to_owned()]),
             ],
         );
     }
 
     #[test]
     fn tagged_parameter_list_unelided_semicolon_without_newline() {
-        itertools::assert_equal(parse("#foo#bar;"), [ParameterList::Tagged(vec!["foo#bar"])]);
+        itertools::assert_equal(parse("#foo#bar;"), [ParameterList::Tagged(vec!["foo#bar".to_owned()])]);
     }
 
     #[test]
@@ -130,22 +300,22 @@ mod tests {
         itertools::assert_equal(
             parse("#foo\n #bar;"),
             [
-                ParameterList::Tagged(vec!["foo"]),
-                ParameterList::Tagged(vec!["bar"]),
+                ParameterList::Tagged(vec!["foo".to_owned()]),
+                ParameterList::Tagged(vec!["bar".to_owned()]),
             ],
         );
     }
 
     #[test]
     fn untagged_parameter_list_single() {
-        itertools::assert_equal(parse("foo;"), [ParameterList::Untagged(vec!["foo"])]);
+        itertools::assert_equal(parse("foo;"), [ParameterList::Untagged(vec!["foo".to_owned()])]);
     }
 
     #[test]
     fn untagged_parameter_list_many() {
         itertools::assert_equal(
             parse("foo:bar:baz:qux;"),
-            [ParameterList::Untagged(vec!["foo", "bar", "baz", "qux"])],
+            [ParameterList::Untagged(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned(), "qux".to_owned()])],
         );
     }
 
@@ -153,7 +323,7 @@ mod tests {
     fn untagged_parameter_list_two_lines() {
         itertools::assert_equal(
             parse("foo:\nbar;"),
-            [ParameterList::Untagged(vec!["foo", "bar"])],
+            [ParameterList::Untagged(vec!["foo".to_owned(), "bar".to_owned()])],
         );
     }
 
@@ -161,7 +331,7 @@ mod tests {
     fn untagged_parameter_list_with_comment() {
         itertools::assert_equal(
             parse("foo://comment\nbar;"),
-            [ParameterList::Untagged(vec!["foo", "bar"])],
+            [ParameterList::Untagged(vec!["foo".to_owned(), "bar".to_owned()])],
         );
     }
 
@@ -169,13 +339,13 @@ mod tests {
     fn untagged_parameter_list_escaped_characters() {
         itertools::assert_equal(
             parse(r"\#\;\:/\/;"),
-            [ParameterList::Untagged(vec!["#;://"])],
+            [ParameterList::Untagged(vec!["#;://".to_owned()])],
         );
     }
 
     #[test]
     fn untagged_parameter_list_elided_semicolon_at_end_of_input() {
-        itertools::assert_equal(parse("foo"), [ParameterList::Untagged(vec!["foo"])]);
+        itertools::assert_equal(parse("foo"), [ParameterList::Untagged(vec!["foo".to_owned()])]);
     }
 
     #[test]
@@ -183,8 +353,8 @@ mod tests {
         itertools::assert_equal(
             parse("foo\n#bar;"),
             [
-                ParameterList::Untagged(vec!["foo"]),
-                ParameterList::Tagged(vec!["bar"]),
+                ParameterList::Untagged(vec!["foo".to_owned()]),
+                ParameterList::Tagged(vec!["bar".to_owned()]),
             ],
         );
     }
@@ -193,7 +363,7 @@ mod tests {
     fn untagged_parameter_list_unelided_semicolon_without_newline() {
         itertools::assert_equal(
             parse("foo#bar;"),
-            [ParameterList::Untagged(vec!["foo#bar"])],
+            [ParameterList::Untagged(vec!["foo#bar".to_owned()])],
         );
     }
 
@@ -202,8 +372,8 @@ mod tests {
         itertools::assert_equal(
             parse("foo\n #bar;"),
             [
-                ParameterList::Untagged(vec!["foo"]),
-                ParameterList::Tagged(vec!["bar"]),
+                ParameterList::Untagged(vec!["foo".to_owned()]),
+                ParameterList::Tagged(vec!["bar".to_owned()]),
             ],
         );
     }
@@ -213,8 +383,8 @@ mod tests {
         itertools::assert_equal(
             parse("#foo:bar;\n#baz:qux;"),
             [
-                ParameterList::Tagged(vec!["foo", "bar"]),
-                ParameterList::Tagged(vec!["baz", "qux"]),
+                ParameterList::Tagged(vec!["foo".to_owned(), "bar".to_owned()]),
+                ParameterList::Tagged(vec!["baz".to_owned(), "qux".to_owned()]),
             ],
         );
     }
@@ -224,8 +394,8 @@ mod tests {
         itertools::assert_equal(
             parse("foo:bar;\nbaz:qux;"),
             [
-                ParameterList::Untagged(vec!["foo", "bar"]),
-                ParameterList::Untagged(vec!["baz", "qux"]),
+                ParameterList::Untagged(vec!["foo".to_owned(), "bar".to_owned()]),
+                ParameterList::Untagged(vec!["baz".to_owned(), "qux".to_owned()]),
             ],
         );
     }
@@ -235,9 +405,9 @@ mod tests {
         itertools::assert_equal(
             parse("#foo:bar;\nbaz:qux;\n#quux:quuz"),
             [
-                ParameterList::Tagged(vec!["foo", "bar"]),
-                ParameterList::Untagged(vec!["baz", "qux"]),
-                ParameterList::Tagged(vec!["quux", "quuz"]),
+                ParameterList::Tagged(vec!["foo".to_owned(), "bar".to_owned()]),
+                ParameterList::Untagged(vec!["baz".to_owned(), "qux".to_owned()]),
+                ParameterList::Tagged(vec!["quux".to_owned(), "quuz".to_owned()]),
             ],
         );
     }
@@ -247,9 +417,9 @@ mod tests {
         itertools::assert_equal(
             parse("#foo:bar;baz:qux;#quux:quuz"),
             [
-                ParameterList::Tagged(vec!["foo", "bar"]),
-                ParameterList::Untagged(vec!["baz", "qux"]),
-                ParameterList::Tagged(vec!["quux", "quuz"]),
+                ParameterList::Tagged(vec!["foo".to_owned(), "bar".to_owned()]),
+                ParameterList::Untagged(vec!["baz".to_owned(), "qux".to_owned()]),
+                ParameterList::Tagged(vec!["quux".to_owned(), "quuz".to_owned()]),
             ],
         );
     }
@@ -259,8 +429,8 @@ mod tests {
         itertools::assert_equal(
             parse("#foo:bar;\n//comment\nbaz:qux;"),
             [
-                ParameterList::Tagged(vec!["foo", "bar"]),
-                ParameterList::Untagged(vec!["baz", "qux"]),
+                ParameterList::Tagged(vec!["foo".to_owned(), "bar".to_owned()]),
+                ParameterList::Untagged(vec!["baz".to_owned(), "qux".to_owned()]),
             ],
         );
     }
@@ -270,15 +440,15 @@ mod tests {
         itertools::assert_equal(
             parse("#foo:bar;\n//comment\n  \n\nbaz:qux;"),
             [
-                ParameterList::Tagged(vec!["foo", "bar"]),
-                ParameterList::Untagged(vec!["baz", "qux"]),
+                ParameterList::Tagged(vec!["foo".to_owned(), "bar".to_owned()]),
+                ParameterList::Untagged(vec!["baz".to_owned(), "qux".to_owned()]),
             ],
         );
     }
 
     #[test]
     fn multiple_empty_parameters() {
-        itertools::assert_equal(parse(":"), [ParameterList::Untagged(vec!["", ""])]);
+        itertools::assert_equal(parse(":"), [ParameterList::Untagged(vec!["".to_owned(), "".to_owned()])]);
     }
 
     #[test]
@@ -288,22 +458,22 @@ mod tests {
 
     #[test]
     fn only_one_empty_parameter_tagged_elided_semicolon() {
-        itertools::assert_equal(parse("# "), [ParameterList::Tagged(vec![""])]);
+        itertools::assert_equal(parse("# "), [ParameterList::Tagged(vec!["".to_owned()])]);
     }
 
     #[test]
     fn parameters_strip_leading_whitespace() {
-        itertools::assert_equal(parse("# foo;"), [ParameterList::Tagged(vec!["foo"])]);
+        itertools::assert_equal(parse("# foo;"), [ParameterList::Tagged(vec!["foo".to_owned()])]);
     }
 
     #[test]
     fn parameters_strip_trailing_whitespace() {
-        itertools::assert_equal(parse("#foo ;"), [ParameterList::Tagged(vec!["foo"])]);
+        itertools::assert_equal(parse("#foo ;"), [ParameterList::Tagged(vec!["foo".to_owned()])]);
     }
 
     #[test]
     fn parameters_strip_leading_and_trailing_whitespace() {
-        itertools::assert_equal(parse("# foo ;"), [ParameterList::Tagged(vec!["foo"])]);
+        itertools::assert_equal(parse("# foo ;"), [ParameterList::Tagged(vec!["foo".to_owned()])]);
     }
 
     #[test]
@@ -311,8 +481,8 @@ mod tests {
         itertools::assert_equal(
             parse("#\n#"),
             [
-                ParameterList::Tagged(vec![""]),
-                ParameterList::Tagged(vec![""]),
+                ParameterList::Tagged(vec!["".to_owned()]),
+                ParameterList::Tagged(vec!["".to_owned()]),
             ],
         );
     }
@@ -322,8 +492,8 @@ mod tests {
         itertools::assert_equal(
             parse("#;#;"),
             [
-                ParameterList::Tagged(vec![""]),
-                ParameterList::Tagged(vec![""]),
+                ParameterList::Tagged(vec!["".to_owned()]),
+                ParameterList::Tagged(vec!["".to_owned()]),
             ],
         );
     }
@@ -333,8 +503,8 @@ mod tests {
         itertools::assert_equal(
             parse(";;"),
             [
-                ParameterList::Untagged(vec![""]),
-                ParameterList::Untagged(vec![""]),
+                ParameterList::Untagged(vec!["".to_owned()]),
+                ParameterList::Untagged(vec!["".to_owned()]),
             ],
         );
     }
