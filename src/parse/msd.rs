@@ -57,6 +57,7 @@ pub(crate) enum ParameterList {
 /// Note that this parsing is infallible. Any string can be parsed as an `msd`-style format. It is
 /// up to the consumer of the output to determine whether the resulting tokens are valid for the
 /// expected format.
+#[allow(dead_code)]
 pub(crate) fn parse(input: &str) -> impl Iterator<Item = ParameterList> {
     /// What type of block we are currently within.
     enum BlockState {
