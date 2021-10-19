@@ -18,4 +18,18 @@ mod tests {
     fn empty() {
         assert_ok_eq!(interpret(iter::empty()), Song::default());
     }
+
+    #[test]
+    fn title() {
+        let mut expected = Song::default();
+        expected.title = Some("foo".to_owned());
+
+        assert_ok_eq!(
+            interpret(iter::once(ParameterList::Tagged(vec![
+                "TITLE".to_owned(),
+                "foo".to_owned()
+            ]))),
+            expected
+        );
+    }
 }
