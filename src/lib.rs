@@ -3,6 +3,7 @@
 pub mod song;
 
 mod internal_log;
+mod parse;
 
 #[doc(inline)]
 pub use song::Song;
