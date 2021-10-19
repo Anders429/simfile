@@ -12,6 +12,7 @@ mod interpret;
 /// old unofficial fork of Stepmania 3.9. However, they are *technically* supported in Stepmania 5,
 /// within both the `sm` and `ssc` file formats, to the extent that the values are simply
 /// interpreted as `Always`. For data preservation reasons, they are included here.
+#[derive(Debug, PartialEq)]
 pub enum Selectable {
     /// Selectable.
     Always,
@@ -39,6 +40,7 @@ pub enum Selectable {
 /// A song simfile.
 ///
 /// This struct strives to be a universal representation of a song simfile.
+#[derive(Debug, Default, PartialEq)]
 pub struct Song {
     /// The song's primary title.
     pub title: Option<String>,

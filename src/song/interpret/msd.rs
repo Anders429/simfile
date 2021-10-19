@@ -6,3 +6,16 @@ where
 {
     todo!()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::interpret;
+    use crate::{parse::msd::ParameterList, Song};
+    use claim::assert_ok_eq;
+    use std::iter;
+
+    #[test]
+    fn empty() {
+        assert_ok_eq!(interpret(iter::empty()), Song::default());
+    }
+}
