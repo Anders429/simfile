@@ -4,7 +4,7 @@ pub(crate) fn interpret<I>(parameter_lists: I) -> Result<Song, ()>
 where
     I: Iterator<Item = ParameterList>,
 {
-    todo!()
+    Ok(Song::default())
 }
 
 #[cfg(test)]
