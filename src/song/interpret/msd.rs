@@ -26,7 +26,10 @@ where
                 match tag.as_str() {
                     tags::TITLE => {
                         if list.len() != 2 {
-                            internal_log::error!("too many parameters for `.msd` title tag: {:?}", list);
+                            internal_log::error!(
+                                "expected 1 parameter for title, found {}",
+                                list.len() - 1
+                            );
                             return Err(());
                         }
                         let title = unsafe {
@@ -105,6 +108,13 @@ mod tests {
             "TITLE".to_owned(),
             "foo".to_owned(),
             "bar".to_owned(),
+        ]))));
+    }
+
+    #[test]
+    fn title_too_few_parameters() {
+        assert_err!(interpret(iter::once(ParameterList::Tagged(vec![
+            "TITLE".to_owned(),
         ]))));
     }
 }
