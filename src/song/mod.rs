@@ -3,6 +3,11 @@
 //! This module provides a [`Song`] type for uniformly representing a song simfile. This allows for
 //! reading, manipulating, and writing simfiles between formats interchangeably.
 
+mod interpret;
+
+use crate::parse;
+use std::{error::Error, fs, path::Path};
+
 /// Situations in which a song is selectable.
 ///
 /// Not all of these options are supported in every simfile format. The `Roulette`, `ExtraStage`,
@@ -10,6 +15,7 @@
 /// old unofficial fork of Stepmania 3.9. However, they are *technically* supported in Stepmania 5,
 /// within both the `sm` and `ssc` file formats, to the extent that the values are simply
 /// interpreted as `Always`. For data preservation reasons, they are included here.
+#[derive(Debug, PartialEq)]
 pub enum Selectable {
     /// Selectable.
     Always,
@@ -37,6 +43,7 @@ pub enum Selectable {
 /// A song simfile.
 ///
 /// This struct strives to be a universal representation of a song simfile.
+#[derive(Debug, Default, PartialEq)]
 pub struct Song {
     /// The song's primary title.
     pub title: Option<String>,
@@ -47,4 +54,44 @@ pub struct Song {
 
     /// Selectability during song selection.
     pub selectable: Option<Selectable>,
+}
+
+impl Song {
+    /// Creates an empty `Song`.
+    ///
+    /// # Example
+    /// ```
+    /// use simfile::Song;
+    ///
+    /// let mut song = Song::new();
+    ///
+    /// // Begin assigning values to the `Song`.
+    /// song.title = Some("foo".to_owned());
+    /// song.artist = Some("bar".to_owned());
+    /// // etc. ...
+    /// ```
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Read a `Song` from a `.msd` file.
+    ///
+    /// The file must be encoded as valid UTF-8.
+    ///
+    /// # Example
+    /// ``` no_run
+    /// use simfile::Song;
+    /// use std::error::Error;
+    ///
+    /// fn main() -> Result<(), Box<dyn Error>> {
+    ///     let song = Song::from_msd("foo.msd")?;
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn from_msd<P>(path: P) -> Result<Self, Box<dyn Error>>
+    where
+        P: AsRef<Path>,
+    {
+        Ok(interpret::msd::interpret(parse::msd::parse(&fs::read_to_string(path)?)).unwrap())
+    }
 }
