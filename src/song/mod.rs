@@ -6,7 +6,7 @@
 mod interpret;
 
 use crate::parse;
-use std::{fs, path::Path};
+use std::{error::Error, fs, path::Path};
 
 /// Situations in which a song is selectable.
 ///
@@ -74,10 +74,24 @@ impl Song {
         Self::default()
     }
 
-    pub fn from_msd<P>(path: P) -> Self
+    /// Read a `Song` from a `.msd` file.
+    ///
+    /// The file must be encoded as valid UTF-8.
+    ///
+    /// # Example
+    /// ``` no_run
+    /// use simfile::Song;
+    /// use std::error::Error;
+    ///
+    /// fn main() -> Result<(), Box<dyn Error>> {
+    ///     let song = Song::from_msd("foo.msd")?;
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn from_msd<P>(path: P) -> Result<Self, Box<dyn Error>>
     where
         P: AsRef<Path>,
     {
-        interpret::msd::interpret(parse::msd::parse(&fs::read_to_string(path).unwrap())).unwrap()
+        Ok(interpret::msd::interpret(parse::msd::parse(&fs::read_to_string(path)?)).unwrap())
     }
 }
