@@ -5,6 +5,9 @@
 
 mod interpret;
 
+use crate::parse;
+use std::{fs, path::Path};
+
 /// Situations in which a song is selectable.
 ///
 /// Not all of these options are supported in every simfile format. The `Roulette`, `ExtraStage`,
@@ -51,4 +54,17 @@ pub struct Song {
 
     /// Selectability during song selection.
     pub selectable: Option<Selectable>,
+}
+
+impl Song {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn from_msd<P>(path: P) -> Self
+    where
+        P: AsRef<Path>,
+    {
+        interpret::msd::interpret(parse::msd::parse(&fs::read_to_string(path).unwrap())).unwrap()
+    }
 }
