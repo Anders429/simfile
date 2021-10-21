@@ -57,6 +57,19 @@ pub struct Song {
 }
 
 impl Song {
+    /// Creates an empty `Song`.
+    ///
+    /// # Example
+    /// ```
+    /// use simfile::Song;
+    ///
+    /// let mut song = Song::new();
+    ///
+    /// // Begin assigning values to the `Song`.
+    /// song.title = Some("foo".to_owned());
+    /// song.artist = Some("bar".to_owned());
+    /// // etc. ...
+    /// ```
     pub fn new() -> Self {
         Self::default()
     }
