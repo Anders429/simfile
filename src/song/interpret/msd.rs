@@ -1,22 +1,88 @@
-use crate::{parse::msd::ParameterList, Song};
+use crate::{internal_log, parse::msd::ParameterList, Song};
+
+/// Constants for all valid `msd` tags.
+mod tags {
+    pub(super) const TITLE: &str = "title";
+}
 
 pub(crate) fn interpret<I>(parameter_lists: I) -> Result<Song, ()>
 where
     I: Iterator<Item = ParameterList>,
 {
-    Ok(Song::default())
+    let mut song = Song::default();
+
+    for parameter_list in parameter_lists {
+        match parameter_list {
+            ParameterList::Tagged(mut list) => {
+                if list.is_empty() {
+                    internal_log::error!("empty tagged parameter list");
+                    return Err(());
+                }
+                let tag = unsafe {
+                    // SAFETY: Just checked that `list` is nonempty.
+                    list.get_unchecked_mut(0)
+                };
+                tag.make_ascii_lowercase();
+                match tag.as_str() {
+                    tags::TITLE => {
+                        if list.len() != 2 {
+                            internal_log::error!("too many parameters for `.msd` title tag: {:?}", list);
+                            return Err(());
+                        }
+                        let title = unsafe {
+                            // SAFETY: Just checked that `list` has exactly 2 elements.
+                            list.get_unchecked(1)
+                        };
+                        song.title = Some(title.clone());
+                    }
+                    _ => {
+                        internal_log::warn!("skipping unrecognized tag {}", tag);
+                    }
+                }
+            }
+            ParameterList::Untagged(list) => {
+                internal_log::error!(
+                    "encountered untagged parameter list {:?}; untagged parameter lists are not used in `.msd` files",
+                    list
+                );
+                return Err(());
+            }
+        }
+    }
+
+    Ok(song)
 }
 
 #[cfg(test)]
 mod tests {
     use super::interpret;
     use crate::{parse::msd::ParameterList, Song};
-    use claim::assert_ok_eq;
+    use claim::{assert_err, assert_ok_eq};
     use std::iter;
 
     #[test]
     fn empty() {
         assert_ok_eq!(interpret(iter::empty()), Song::default());
+    }
+
+    #[test]
+    fn untagged_parameter_list_errors() {
+        assert_err!(interpret(iter::once(ParameterList::Untagged(Vec::new()))));
+    }
+
+    #[test]
+    fn empty_tag_errors() {
+        assert_err!(interpret(iter::once(ParameterList::Tagged(Vec::new()))));
+    }
+
+    #[test]
+    fn unrecognized_tag() {
+        assert_ok_eq!(
+            interpret(iter::once(ParameterList::Tagged(vec![
+                "UNRECOGNIZED".to_owned()
+            ]))),
+            Song::default()
+        );
     }
 
     #[test]
@@ -31,5 +97,14 @@ mod tests {
             ]))),
             expected
         );
+    }
+
+    #[test]
+    fn title_too_many_parameters() {
+        assert_err!(interpret(iter::once(ParameterList::Tagged(vec![
+            "TITLE".to_owned(),
+            "foo".to_owned(),
+            "bar".to_owned(),
+        ]))));
     }
 }
