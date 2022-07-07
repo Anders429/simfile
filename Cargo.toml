@@ -1,12 +1,11 @@
 [package]
 name = "simfile"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-log = {version = "0.4.14", optional = true}
+msd = "0.3.0"
+serde = {version = "1.0.138", default-features = false}
 
 [dev-dependencies]
-log = "0.4.14"
-itertools = "0.10.1"
-testing_logger = "0.1.1"
+serde_test = "1.0.138"
