@@ -1,13 +1,13 @@
 use serde::{
-    ser::{SerializeStruct},
     de::{EnumAccess, Error, MapAccess, Unexpected, VariantAccess, Visitor},
+    ser::SerializeStruct,
     Deserialize, Deserializer, Serialize, Serializer,
 };
 use std::{fmt, str};
 
 /// All valid step combinations, according to the MSD specification.
-#[derive(Debug, Eq, PartialEq)]
-pub enum Step {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(in crate::song) enum Step {
     None,
     Up,
     Right,
@@ -62,8 +62,8 @@ impl Step {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub enum Notes {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(in crate::song) enum Notes {
     Eighth(Step),
 }
 
@@ -84,8 +84,8 @@ impl Notes {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Steps {
-    notes: Vec<Notes>,
+pub(in crate::song) struct Steps {
+    pub(in crate::song) notes: Vec<Notes>,
 }
 
 impl Serialize for Steps {
@@ -126,7 +126,7 @@ impl<'de> Deserialize<'de> for Steps {
             {
                 // TODO: Make this capacity approximation more intelligent.
                 let mut notes = Vec::with_capacity(bytes.len());
-                for &byte in bytes {
+                for &byte in bytes.iter().filter(|b| !b.is_ascii_whitespace()) {
                     notes.push(Notes::Eighth(Step::from_serialized_byte(byte)?));
                 }
                 Ok(Steps { notes })
@@ -139,7 +139,7 @@ impl<'de> Deserialize<'de> for Steps {
 
 /// All valid MSD difficulties.
 #[derive(Debug, Eq, PartialEq)]
-pub enum Difficulty {
+pub(in crate::song) enum Difficulty {
     /// Basic mode.
     Basic,
     /// Another mode.
@@ -237,23 +237,26 @@ impl<'de> Deserialize<'de> for Difficulty {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Msd {
-    file: String,
-    title: String,
-    artist: String,
-    bpm: f64,
-    gap: i64,
-    back: String,
-    bgm: String,
-    select: String,
-    single: Vec<(Difficulty, u8, Steps)>,
-    double: Vec<(Difficulty, u8, Steps, Steps)>,
-    couple: Vec<(Difficulty, u8, Steps, Steps)>,
+pub(in crate::song) struct Song {
+    pub(in crate::song) file: String,
+    pub(in crate::song) title: String,
+    pub(in crate::song) artist: String,
+    pub(in crate::song) bpm: f64,
+    pub(in crate::song) gap: i64,
+    pub(in crate::song) back: String,
+    pub(in crate::song) bgm: String,
+    pub(in crate::song) select: String,
+    pub(in crate::song) single: Vec<(Difficulty, u8, Steps)>,
+    pub(in crate::song) double: Vec<(Difficulty, u8, Steps, Steps)>,
+    pub(in crate::song) couple: Vec<(Difficulty, u8, Steps, Steps)>,
 }
 
-impl Serialize for Msd {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        let mut serialize_struct = serializer.serialize_struct("Msd", 11)?;
+impl Serialize for Song {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut serialize_struct = serializer.serialize_struct("Song", 11)?;
         serialize_struct.serialize_field("FILE", &self.file)?;
         serialize_struct.serialize_field("TITLE", &self.title)?;
         serialize_struct.serialize_field("ARTIST", &self.artist)?;
@@ -269,8 +272,11 @@ impl Serialize for Msd {
     }
 }
 
-impl<'de> Deserialize<'de> for Msd {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+impl<'de> Deserialize<'de> for Song {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
         enum Field {
             File,
             Title,
@@ -286,7 +292,10 @@ impl<'de> Deserialize<'de> for Msd {
         }
 
         impl<'de> Deserialize<'de> for Field {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
                 struct FieldVisitor;
 
                 impl<'de> Visitor<'de> for FieldVisitor {
@@ -296,7 +305,10 @@ impl<'de> Deserialize<'de> for Msd {
                         formatter.write_str("`FILE`, `TITLE`, `ARTIST`, `BPM`, `GAP`, `BACK`, `BGM`, `SELECT`, `SINGLE`, `DOUBLE`, or `COUPLE`")
                     }
 
-                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E> where E: Error {
+                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
                         match value {
                             "FILE" => Ok(Field::File),
                             "TITLE" => Ok(Field::Title),
@@ -309,7 +321,7 @@ impl<'de> Deserialize<'de> for Msd {
                             "SINGLE" => Ok(Field::Single),
                             "DOUBLE" => Ok(Field::Double),
                             "COUPLE" => Ok(Field::Couple),
-                            _ => Err(Error::unknown_field(value, FIELDS))
+                            _ => Err(Error::unknown_field(value, FIELDS)),
                         }
                     }
                 }
@@ -318,16 +330,19 @@ impl<'de> Deserialize<'de> for Msd {
             }
         }
 
-        struct MsdVisitor;
+        struct SongVisitor;
 
-        impl<'de> Visitor<'de> for MsdVisitor {
-            type Value = Msd;
+        impl<'de> Visitor<'de> for SongVisitor {
+            type Value = Song;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("struct Msd")
+                formatter.write_str("struct Song")
             }
 
-            fn visit_map<A>(self, mut map_access: A) -> Result<Self::Value, A::Error> where A: MapAccess<'de> {
+            fn visit_map<A>(self, mut map_access: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
                 let mut file: Option<String> = None;
                 let mut title: Option<String> = None;
                 let mut artist: Option<String> = None;
@@ -423,7 +438,7 @@ impl<'de> Deserialize<'de> for Msd {
                 let double = double.unwrap_or_default();
                 let couple = couple.unwrap_or_default();
 
-                Ok(Msd {
+                Ok(Song {
                     file,
                     title,
                     artist,
@@ -439,8 +454,11 @@ impl<'de> Deserialize<'de> for Msd {
             }
         }
 
-        const FIELDS: &'static [&'static str] = &["FILE", "TITLE", "ARTIST", "BPM", "GAP", "BACK", "BGM", "SELECT", "SINGLE", "DOUBLE", "COUPLE"];
-        deserializer.deserialize_struct("Msd", FIELDS, MsdVisitor)
+        const FIELDS: &'static [&'static str] = &[
+            "FILE", "TITLE", "ARTIST", "BPM", "GAP", "BACK", "BGM", "SELECT", "SINGLE", "DOUBLE",
+            "COUPLE",
+        ];
+        deserializer.deserialize_struct("Song", FIELDS, SongVisitor)
     }
 }
 
@@ -505,7 +523,7 @@ mod tests {
     #[test]
     fn msd_ser_de_full() {
         assert_tokens(
-            &Msd {
+            &Song {
                 file: "file".to_string(),
                 title: "title".to_string(),
                 artist: "artist".to_string(),
@@ -515,25 +533,35 @@ mod tests {
                 bgm: "bgm".to_string(),
                 select: "select".to_string(),
                 single: vec![
-                    (Difficulty::Basic, 4, Steps {
-                        notes: vec![
-                            Notes::Eighth(Step::Up),
-                            Notes::Eighth(Step::None),
-                            Notes::Eighth(Step::Down),
-                            Notes::Eighth(Step::Right),
-                        ],
-                    }),
-                    (Difficulty::Another, 7, Steps {
-                        notes: vec![
-                            Notes::Eighth(Step::UpDown),
-                            Notes::Eighth(Step::UpLeft),
-                            Notes::Eighth(Step::None),
-                            Notes::Eighth(Step::Up),
-                        ],
-                    }),
+                    (
+                        Difficulty::Basic,
+                        4,
+                        Steps {
+                            notes: vec![
+                                Notes::Eighth(Step::Up),
+                                Notes::Eighth(Step::None),
+                                Notes::Eighth(Step::Down),
+                                Notes::Eighth(Step::Right),
+                            ],
+                        },
+                    ),
+                    (
+                        Difficulty::Another,
+                        7,
+                        Steps {
+                            notes: vec![
+                                Notes::Eighth(Step::UpDown),
+                                Notes::Eighth(Step::UpLeft),
+                                Notes::Eighth(Step::None),
+                                Notes::Eighth(Step::Up),
+                            ],
+                        },
+                    ),
                 ],
-                double: vec![
-                    (Difficulty::Maniac, 9, Steps {
+                double: vec![(
+                    Difficulty::Maniac,
+                    9,
+                    Steps {
                         notes: vec![
                             Notes::Eighth(Step::Down),
                             Notes::Eighth(Step::Down),
@@ -548,46 +576,55 @@ mod tests {
                             Notes::Eighth(Step::LeftRight),
                             Notes::Eighth(Step::DownLeft),
                         ],
-                    }),
-                ],
+                    },
+                )],
                 couple: vec![
-                    (Difficulty::Basic, 2, Steps {
-                        notes: vec![
-                            Notes::Eighth(Step::UpRight),
-                            Notes::Eighth(Step::Down),
-                            Notes::Eighth(Step::DownRight),
-                            Notes::Eighth(Step::None),
-                        ],
-                    },
-                    Steps {
-                        notes: vec![
-                            Notes::Eighth(Step::Up),
-                            Notes::Eighth(Step::Up),
-                            Notes::Eighth(Step::UpDown),
-                            Notes::Eighth(Step::Up),
-                        ],
-                    }),
-                    (Difficulty::Another, 6, Steps {
-                        notes: vec![
-                            Notes::Eighth(Step::None),
-                            Notes::Eighth(Step::None),
-                            Notes::Eighth(Step::None),
-                            Notes::Eighth(Step::None),
-                        ],
-                    },
-                    Steps {
-                        notes: vec![
-                            Notes::Eighth(Step::Left),
-                            Notes::Eighth(Step::Up),
-                            Notes::Eighth(Step::Right),
-                            Notes::Eighth(Step::Down),
-                        ],
-                    }),
-                ]
+                    (
+                        Difficulty::Basic,
+                        2,
+                        Steps {
+                            notes: vec![
+                                Notes::Eighth(Step::UpRight),
+                                Notes::Eighth(Step::Down),
+                                Notes::Eighth(Step::DownRight),
+                                Notes::Eighth(Step::None),
+                            ],
+                        },
+                        Steps {
+                            notes: vec![
+                                Notes::Eighth(Step::Up),
+                                Notes::Eighth(Step::Up),
+                                Notes::Eighth(Step::UpDown),
+                                Notes::Eighth(Step::Up),
+                            ],
+                        },
+                    ),
+                    (
+                        Difficulty::Another,
+                        6,
+                        Steps {
+                            notes: vec![
+                                Notes::Eighth(Step::None),
+                                Notes::Eighth(Step::None),
+                                Notes::Eighth(Step::None),
+                                Notes::Eighth(Step::None),
+                            ],
+                        },
+                        Steps {
+                            notes: vec![
+                                Notes::Eighth(Step::Left),
+                                Notes::Eighth(Step::Up),
+                                Notes::Eighth(Step::Right),
+                                Notes::Eighth(Step::Down),
+                            ],
+                        },
+                    ),
+                ],
             },
             &[
                 Token::Struct {
-                    name: "Msd", len: 11
+                    name: "Song",
+                    len: 11,
                 },
                 Token::Str("FILE"),
                 Token::Str("file"),
@@ -606,8 +643,8 @@ mod tests {
                 Token::Str("SELECT"),
                 Token::Str("select"),
                 Token::Str("SINGLE"),
-                Token::Seq {len: Some(2)},
-                Token::Tuple {len: 3},
+                Token::Seq { len: Some(2) },
+                Token::Tuple { len: 3 },
                 Token::UnitVariant {
                     name: "Difficulty",
                     variant: "BASIC",
@@ -615,7 +652,7 @@ mod tests {
                 Token::U8(4),
                 Token::Bytes(b"8026"),
                 Token::TupleEnd,
-                Token::Tuple {len: 3},
+                Token::Tuple { len: 3 },
                 Token::UnitVariant {
                     name: "Difficulty",
                     variant: "ANOTHER",
@@ -625,8 +662,8 @@ mod tests {
                 Token::TupleEnd,
                 Token::SeqEnd,
                 Token::Str("DOUBLE"),
-                Token::Seq {len: Some(1)},
-                Token::Tuple {len: 4},
+                Token::Seq { len: Some(1) },
+                Token::Tuple { len: 4 },
                 Token::UnitVariant {
                     name: "Difficulty",
                     variant: "MANIAC",
@@ -637,8 +674,8 @@ mod tests {
                 Token::TupleEnd,
                 Token::SeqEnd,
                 Token::Str("COUPLE"),
-                Token::Seq {len: Some(2)},
-                Token::Tuple {len: 4},
+                Token::Seq { len: Some(2) },
+                Token::Tuple { len: 4 },
                 Token::UnitVariant {
                     name: "Difficulty",
                     variant: "BASIC",
@@ -647,7 +684,7 @@ mod tests {
                 Token::Bytes(b"9230"),
                 Token::Bytes(b"88A8"),
                 Token::TupleEnd,
-                Token::Tuple {len: 4},
+                Token::Tuple { len: 4 },
                 Token::UnitVariant {
                     name: "Difficulty",
                     variant: "ANOTHER",
@@ -658,7 +695,7 @@ mod tests {
                 Token::TupleEnd,
                 Token::SeqEnd,
                 Token::StructEnd,
-            ]
+            ],
         )
     }
 }
