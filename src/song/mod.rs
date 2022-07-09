@@ -167,17 +167,17 @@ pub struct Chart {
 
 #[derive(Debug)]
 pub struct Song {
-    title: String,
+    title: Option<String>,
     subtitle: Option<String>,
-    artist: String,
-    credit: String,
+    artist: Option<String>,
+    credit: Option<String>,
 
-    bpm: f64,
-    offset: i64,
+    bpm: Option<f64>,
+    offset: Option<i64>,
 
-    background_file: String,
-    music_file: String,
-    music_preview_file: String,
+    background_file: Option<String>,
+    music_file: Option<String>,
+    music_preview_file: Option<String>,
 
     charts: Vec<Chart>,
 }
@@ -187,14 +187,11 @@ impl Song {
     where
         P: AsRef<Path>,
     {
-        let song: msd::Song = ::msd::from_reader(BufReader::new(
+        ::msd::from_reader::<_, msd::Song>(BufReader::new(
             File::open(path).map_err(|error| Error::Io(error))?,
         ))
-        .map_err(|error| Error::Deserialization(error))?;
-
-        dbg! {&song};
-
-        Ok(song.into())
+        .map_err(|error| Error::Deserialization(error))
+        .map(|song| song.into())
     }
 }
 

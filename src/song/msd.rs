@@ -238,15 +238,15 @@ impl<'de> Deserialize<'de> for Difficulty {
 
 #[derive(Debug, PartialEq)]
 pub(in crate::song) struct Song {
-    pub(in crate::song) file: String,
-    pub(in crate::song) title: String,
-    pub(in crate::song) artist: String,
-    pub(in crate::song) msd: String,
-    pub(in crate::song) bpm: f64,
-    pub(in crate::song) gap: i64,
-    pub(in crate::song) back: String,
-    pub(in crate::song) bgm: String,
-    pub(in crate::song) select: String,
+    pub(in crate::song) file: Option<String>,
+    pub(in crate::song) title: Option<String>,
+    pub(in crate::song) artist: Option<String>,
+    pub(in crate::song) msd: Option<String>,
+    pub(in crate::song) bpm: Option<f64>,
+    pub(in crate::song) gap: Option<i64>,
+    pub(in crate::song) back: Option<String>,
+    pub(in crate::song) bgm: Option<String>,
+    pub(in crate::song) select: Option<String>,
     pub(in crate::song) single: Vec<(Difficulty, u8, Steps)>,
     pub(in crate::song) double: Vec<(Difficulty, u8, Steps, Steps)>,
     pub(in crate::song) couple: Vec<(Difficulty, u8, Steps, Steps)>,
@@ -347,18 +347,18 @@ impl<'de> Deserialize<'de> for Song {
             where
                 A: MapAccess<'de>,
             {
-                let mut file: Option<String> = None;
-                let mut title: Option<String> = None;
-                let mut artist: Option<String> = None;
-                let mut msd: Option<String> = None;
-                let mut bpm: Option<f64> = None;
-                let mut gap: Option<i64> = None;
-                let mut back: Option<String> = None;
-                let mut bgm: Option<String> = None;
-                let mut select: Option<String> = None;
-                let mut single: Option<Vec<(Difficulty, u8, Steps)>> = None;
-                let mut double: Option<Vec<(Difficulty, u8, Steps, Steps)>> = None;
-                let mut couple: Option<Vec<(Difficulty, u8, Steps, Steps)>> = None;
+                let mut file = None;
+                let mut title = None;
+                let mut artist = None;
+                let mut msd = None;
+                let mut bpm = None;
+                let mut gap = None;
+                let mut back = None;
+                let mut bgm = None;
+                let mut select = None;
+                let mut single = Vec::new();
+                let mut double = Vec::new();
+                let mut couple = Vec::new();
 
                 while let Some(key) = map_access.next_key()? {
                     match key {
@@ -366,89 +366,71 @@ impl<'de> Deserialize<'de> for Song {
                             if file.is_some() {
                                 return Err(Error::duplicate_field("FILE"));
                             }
-                            file = Some(map_access.next_value()?);
+                            file = map_access.next_value()?;
                         }
                         Field::Title => {
                             if title.is_some() {
                                 return Err(Error::duplicate_field("TITLE"));
                             }
-                            title = Some(map_access.next_value()?);
+                            title = map_access.next_value()?;
                         }
                         Field::Artist => {
                             if artist.is_some() {
                                 return Err(Error::duplicate_field("ARTIST"));
                             }
-                            artist = Some(map_access.next_value()?);
+                            artist = map_access.next_value()?;
                         }
                         Field::Msd => {
                             if msd.is_some() {
                                 return Err(Error::duplicate_field("MSD"));
                             }
-                            msd = Some(map_access.next_value()?);
+                            msd = map_access.next_value()?;
                         }
                         Field::Bpm => {
                             if bpm.is_some() {
                                 return Err(Error::duplicate_field("BPM"));
                             }
-                            bpm = Some(map_access.next_value()?);
+                            bpm = map_access.next_value()?;
                         }
                         Field::Gap => {
                             if gap.is_some() {
                                 return Err(Error::duplicate_field("GAP"));
                             }
-                            gap = Some(map_access.next_value()?);
+                            gap = map_access.next_value()?;
                         }
                         Field::Back => {
                             if back.is_some() {
                                 return Err(Error::duplicate_field("BACK"));
                             }
-                            back = Some(map_access.next_value()?);
+                            back = map_access.next_value()?;
                         }
                         Field::Bgm => {
                             if bgm.is_some() {
                                 return Err(Error::duplicate_field("BGM"));
                             }
-                            bgm = Some(map_access.next_value()?);
+                            bgm = map_access.next_value()?;
                         }
                         Field::Select => {
                             if select.is_some() {
                                 return Err(Error::duplicate_field("SELECT"));
                             }
-                            select = Some(map_access.next_value()?);
+                            select = map_access.next_value()?;
                         }
                         Field::Single => {
-                            if single.is_some() {
-                                return Err(Error::duplicate_field("SINGLE"));
-                            }
-                            single = Some(map_access.next_value()?);
+                            single.extend(map_access.next_value::<Vec<(Difficulty, u8, Steps)>>()?);
                         }
                         Field::Double => {
-                            if double.is_some() {
-                                return Err(Error::duplicate_field("DOUBLE"));
-                            }
-                            double = Some(map_access.next_value()?);
+                            double.extend(
+                                map_access.next_value::<Vec<(Difficulty, u8, Steps, Steps)>>()?,
+                            );
                         }
                         Field::Couple => {
-                            if couple.is_some() {
-                                return Err(Error::duplicate_field("COUPLE"));
-                            }
-                            couple = Some(map_access.next_value()?);
+                            couple.extend(
+                                map_access.next_value::<Vec<(Difficulty, u8, Steps, Steps)>>()?,
+                            );
                         }
                     }
                 }
-
-                let file = file.unwrap_or_default();
-                let title = title.unwrap_or_default();
-                let artist = artist.unwrap_or_default();
-                let msd = msd.unwrap_or_default();
-                let bpm = bpm.unwrap_or_default();
-                let gap = gap.unwrap_or_default();
-                let back = back.unwrap_or_default();
-                let bgm = bgm.unwrap_or_default();
-                let select = select.unwrap_or_default();
-                let single = single.unwrap_or_default();
-                let double = double.unwrap_or_default();
-                let couple = couple.unwrap_or_default();
 
                 Ok(Song {
                     file,
@@ -468,8 +450,8 @@ impl<'de> Deserialize<'de> for Song {
         }
 
         const FIELDS: &'static [&'static str] = &[
-            "FILE", "TITLE", "ARTIST", "MSD", "BPM", "GAP", "BACK", "BGM", "SELECT", "SINGLE", "DOUBLE",
-            "COUPLE",
+            "FILE", "TITLE", "ARTIST", "MSD", "BPM", "GAP", "BACK", "BGM", "SELECT", "SINGLE",
+            "DOUBLE", "COUPLE",
         ];
         deserializer.deserialize_struct("Song", FIELDS, SongVisitor)
     }
@@ -537,15 +519,15 @@ mod tests {
     fn msd_ser_de_full() {
         assert_tokens(
             &Song {
-                file: "file".to_string(),
-                title: "title".to_string(),
-                artist: "artist".to_string(),
-                msd: "msd".to_string(),
-                bpm: 42.9,
-                gap: -100,
-                back: "back".to_string(),
-                bgm: "bgm".to_string(),
-                select: "select".to_string(),
+                file: Some("file".to_string()),
+                title: Some("title".to_string()),
+                artist: Some("artist".to_string()),
+                msd: Some("msd".to_string()),
+                bpm: Some(42.9),
+                gap: Some(-100),
+                back: Some("back".to_string()),
+                bgm: Some("bgm".to_string()),
+                select: Some("select".to_string()),
                 single: vec![
                     (
                         Difficulty::Basic,
@@ -641,22 +623,31 @@ mod tests {
                     len: 11,
                 },
                 Token::Str("FILE"),
+                Token::Some,
                 Token::Str("file"),
                 Token::Str("TITLE"),
+                Token::Some,
                 Token::Str("title"),
                 Token::Str("ARTIST"),
+                Token::Some,
                 Token::Str("artist"),
                 Token::Str("MSD"),
+                Token::Some,
                 Token::Str("msd"),
                 Token::Str("BPM"),
+                Token::Some,
                 Token::F64(42.9),
                 Token::Str("GAP"),
+                Token::Some,
                 Token::I64(-100),
                 Token::Str("BACK"),
+                Token::Some,
                 Token::Str("back"),
                 Token::Str("BGM"),
+                Token::Some,
                 Token::Str("bgm"),
                 Token::Str("SELECT"),
+                Token::Some,
                 Token::Str("select"),
                 Token::Str("SINGLE"),
                 Token::Seq { len: Some(2) },
