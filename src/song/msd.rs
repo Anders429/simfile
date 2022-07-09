@@ -241,6 +241,7 @@ pub(in crate::song) struct Song {
     pub(in crate::song) file: String,
     pub(in crate::song) title: String,
     pub(in crate::song) artist: String,
+    pub(in crate::song) msd: String,
     pub(in crate::song) bpm: f64,
     pub(in crate::song) gap: i64,
     pub(in crate::song) back: String,
@@ -260,6 +261,7 @@ impl Serialize for Song {
         serialize_struct.serialize_field("FILE", &self.file)?;
         serialize_struct.serialize_field("TITLE", &self.title)?;
         serialize_struct.serialize_field("ARTIST", &self.artist)?;
+        serialize_struct.serialize_field("MSD", &self.msd)?;
         serialize_struct.serialize_field("BPM", &self.bpm)?;
         serialize_struct.serialize_field("GAP", &self.gap)?;
         serialize_struct.serialize_field("BACK", &self.back)?;
@@ -281,6 +283,7 @@ impl<'de> Deserialize<'de> for Song {
             File,
             Title,
             Artist,
+            Msd,
             Bpm,
             Gap,
             Back,
@@ -313,6 +316,7 @@ impl<'de> Deserialize<'de> for Song {
                             "FILE" => Ok(Field::File),
                             "TITLE" => Ok(Field::Title),
                             "ARTIST" => Ok(Field::Artist),
+                            "MSD" => Ok(Field::Msd),
                             "BPM" => Ok(Field::Bpm),
                             "GAP" => Ok(Field::Gap),
                             "BACK" => Ok(Field::Back),
@@ -346,6 +350,7 @@ impl<'de> Deserialize<'de> for Song {
                 let mut file: Option<String> = None;
                 let mut title: Option<String> = None;
                 let mut artist: Option<String> = None;
+                let mut msd: Option<String> = None;
                 let mut bpm: Option<f64> = None;
                 let mut gap: Option<i64> = None;
                 let mut back: Option<String> = None;
@@ -374,6 +379,12 @@ impl<'de> Deserialize<'de> for Song {
                                 return Err(Error::duplicate_field("ARTIST"));
                             }
                             artist = Some(map_access.next_value()?);
+                        }
+                        Field::Msd => {
+                            if msd.is_some() {
+                                return Err(Error::duplicate_field("MSD"));
+                            }
+                            msd = Some(map_access.next_value()?);
                         }
                         Field::Bpm => {
                             if bpm.is_some() {
@@ -429,6 +440,7 @@ impl<'de> Deserialize<'de> for Song {
                 let file = file.unwrap_or_default();
                 let title = title.unwrap_or_default();
                 let artist = artist.unwrap_or_default();
+                let msd = msd.unwrap_or_default();
                 let bpm = bpm.unwrap_or_default();
                 let gap = gap.unwrap_or_default();
                 let back = back.unwrap_or_default();
@@ -442,6 +454,7 @@ impl<'de> Deserialize<'de> for Song {
                     file,
                     title,
                     artist,
+                    msd,
                     bpm,
                     gap,
                     back,
@@ -455,7 +468,7 @@ impl<'de> Deserialize<'de> for Song {
         }
 
         const FIELDS: &'static [&'static str] = &[
-            "FILE", "TITLE", "ARTIST", "BPM", "GAP", "BACK", "BGM", "SELECT", "SINGLE", "DOUBLE",
+            "FILE", "TITLE", "ARTIST", "MSD", "BPM", "GAP", "BACK", "BGM", "SELECT", "SINGLE", "DOUBLE",
             "COUPLE",
         ];
         deserializer.deserialize_struct("Song", FIELDS, SongVisitor)
@@ -527,6 +540,7 @@ mod tests {
                 file: "file".to_string(),
                 title: "title".to_string(),
                 artist: "artist".to_string(),
+                msd: "msd".to_string(),
                 bpm: 42.9,
                 gap: -100,
                 back: "back".to_string(),
@@ -632,6 +646,8 @@ mod tests {
                 Token::Str("title"),
                 Token::Str("ARTIST"),
                 Token::Str("artist"),
+                Token::Str("MSD"),
+                Token::Str("msd"),
                 Token::Str("BPM"),
                 Token::F64(42.9),
                 Token::Str("GAP"),

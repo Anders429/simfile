@@ -170,6 +170,7 @@ pub struct Song {
     title: String,
     subtitle: Option<String>,
     artist: String,
+    credit: String,
 
     bpm: f64,
     offset: i64,
@@ -229,6 +230,7 @@ impl From<msd::Song> for Song {
             title: song.title,
             subtitle: None,
             artist: song.artist,
+            credit: song.msd,
 
             bpm: song.bpm,
             offset: song.gap,
@@ -248,6 +250,6 @@ mod tests {
 
     #[test]
     fn test() {
-        dbg!(Song::from_msd("test/data/msd/KUNGFU.msd"));
+        dbg!(Song::from_msd("test/data/msd/BAD.msd"));
     }
 }
