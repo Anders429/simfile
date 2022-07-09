@@ -1,10 +1,11 @@
 //! Generic representation of a song.
-//! 
+//!
 //! This module contains all generic types necessary to represent a song simfile regardless of that
 //! simfile's original format. This allows for simfiles to be universally read and edited, as well
-//! as enabling easy transcoding between simfile formats. 
+//! as enabling easy transcoding between simfile formats.
 
 mod msd;
+mod util;
 
 use std::{fs::File, io, io::BufReader, path::Path};
 

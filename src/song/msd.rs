@@ -64,22 +64,70 @@ impl Step {
     }
 }
 
-
-
 impl From<Step> for [song::Panel; 4] {
     fn from(step: Step) -> Self {
         match step {
             Step::None => [song::Panel::None; 4],
-            Step::Left => [song::Panel::Step, song::Panel::None, song::Panel::None, song::Panel::None],
-            Step::Down => [song::Panel::None, song::Panel::Step, song::Panel::None, song::Panel::None],
-            Step::Up => [song::Panel::None, song::Panel::None, song::Panel::Step, song::Panel::None],
-            Step::Right => [song::Panel::None, song::Panel::None, song::Panel::None, song::Panel::Step],
-            Step::DownLeft => [song::Panel::Step, song::Panel::Step, song::Panel::None, song::Panel::None],
-            Step::UpLeft => [song::Panel::Step, song::Panel::None, song::Panel::Step, song::Panel::None],
-            Step::LeftRight => [song::Panel::Step, song::Panel::None, song::Panel::None, song::Panel::Step],
-            Step::UpDown => [song::Panel::None, song::Panel::Step, song::Panel::Step, song::Panel::None],
-            Step::DownRight => [song::Panel::None, song::Panel::Step, song::Panel::None, song::Panel::Step],
-            Step::UpRight => [song::Panel::None, song::Panel::None, song::Panel::Step, song::Panel::Step],
+            Step::Left => [
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::None,
+            ],
+            Step::Down => [
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::None,
+            ],
+            Step::Up => [
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::None,
+            ],
+            Step::Right => [
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::Step,
+            ],
+            Step::DownLeft => [
+                song::Panel::Step,
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::None,
+            ],
+            Step::UpLeft => [
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::None,
+            ],
+            Step::LeftRight => [
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::Step,
+            ],
+            Step::UpDown => [
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::Step,
+                song::Panel::None,
+            ],
+            Step::DownRight => [
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::Step,
+            ],
+            Step::UpRight => [
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::Step,
+            ],
         }
     }
 }
@@ -185,53 +233,48 @@ impl From<(Steps, Steps)> for song::Steps<8> {
         // Combines the notes from both step charts into a single iterator, accounting for differing length as well.
         let notes_0_len = msd_steps.0.notes.len();
         let notes_1_len = msd_steps.1.notes.len();
-        let notes_iter = if notes_0_len > notes_1_len {
-            Either::Left(Either::Left(
-                msd_steps.0.notes.into_iter().zip(
+        let notes_iter =
+            if notes_0_len > notes_1_len {
+                Either::Left(Either::Left(msd_steps.0.notes.into_iter().zip(
                     msd_steps.1.notes.into_iter().chain(
-                        iter::repeat(Notes::Eighth(Step::None))
-                            .take(notes_0_len - notes_1_len),
+                        iter::repeat(Notes::Eighth(Step::None)).take(notes_0_len - notes_1_len),
                     ),
-                ),
-            ))
-        } else if notes_0_len < notes_1_len {
-            Either::Left(Either::Right(
-                msd_steps
-                    .0
-                    .notes
-                    .into_iter()
-                    .chain(
-                        iter::repeat(Notes::Eighth(Step::None))
-                            .take(notes_0_len - notes_1_len),
-                    )
-                    .zip(msd_steps.1.notes.into_iter()),
-            ))
-        } else {
-            Either::Right(
-                msd_steps
-                    .0
-                    .notes
-                    .into_iter()
-                    .zip(msd_steps.1.notes.into_iter()),
-            )
-        };
+                )))
+            } else if notes_0_len < notes_1_len {
+                Either::Left(Either::Right(
+                    msd_steps
+                        .0
+                        .notes
+                        .into_iter()
+                        .chain(
+                            iter::repeat(Notes::Eighth(Step::None)).take(notes_0_len - notes_1_len),
+                        )
+                        .zip(msd_steps.1.notes.into_iter()),
+                ))
+            } else {
+                Either::Right(
+                    msd_steps
+                        .0
+                        .notes
+                        .into_iter()
+                        .zip(msd_steps.1.notes.into_iter()),
+                )
+            };
 
         for (left_notes, right_notes) in notes_iter {
             match (left_notes, right_notes) {
-                (Notes::Eighth(left_step), Notes::Eighth(right_step)) => {
-                    steps.push(song::Step {
-                        panels: {
-                            let mut whole = MaybeUninit::uninit();
-                            let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
-                            unsafe {
-                                ptr.write(left_step.into());
-                                ptr.add(1).write(right_step.into());
-                                whole.assume_init()
-                            }
-                        },
-                        duration: song::Duration::Eighth,
-                    })
-                }
+                (Notes::Eighth(left_step), Notes::Eighth(right_step)) => steps.push(song::Step {
+                    panels: {
+                        let mut whole = MaybeUninit::uninit();
+                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                        unsafe {
+                            ptr.write(left_step.into());
+                            ptr.add(1).write(right_step.into());
+                            whole.assume_init()
+                        }
+                    },
+                    duration: song::Duration::Eighth,
+                }),
             }
         }
 
@@ -597,9 +640,21 @@ impl From<Song> for song::Song {
             })
         }
 
+        // Possibly extract a subtitle from the title.
+        let title;
+        let subtitle;
+        if let Some(song_title) = song.title {
+            let (split_title, split_subtitle) = song::util::split_title_and_subtitle(song_title);
+            title = Some(split_title);
+            subtitle = split_subtitle;
+        } else {
+            title = song.title;
+            subtitle = None;
+        }
+
         song::Song {
-            title: song.title,
-            subtitle: None,
+            title: title,
+            subtitle: subtitle,
             artist: song.artist,
             credit: song.msd,
 
