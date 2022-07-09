@@ -1,9 +1,11 @@
+use crate::song;
+use either::Either;
 use serde::{
     de::{EnumAccess, Error, MapAccess, Unexpected, VariantAccess, Visitor},
     ser::SerializeStruct,
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use std::{fmt, str};
+use std::{fmt, iter, mem::MaybeUninit, str};
 
 /// All valid step combinations, according to the MSD specification.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -58,6 +60,26 @@ impl Step {
                 Unexpected::Char(byte.into()),
                 &"'0', '1', '2', '3', '4', '6', '7', '8', '9', 'A', or 'B'",
             )),
+        }
+    }
+}
+
+
+
+impl From<Step> for [song::Panel; 4] {
+    fn from(step: Step) -> Self {
+        match step {
+            Step::None => [song::Panel::None; 4],
+            Step::Left => [song::Panel::Step, song::Panel::None, song::Panel::None, song::Panel::None],
+            Step::Down => [song::Panel::None, song::Panel::Step, song::Panel::None, song::Panel::None],
+            Step::Up => [song::Panel::None, song::Panel::None, song::Panel::Step, song::Panel::None],
+            Step::Right => [song::Panel::None, song::Panel::None, song::Panel::None, song::Panel::Step],
+            Step::DownLeft => [song::Panel::Step, song::Panel::Step, song::Panel::None, song::Panel::None],
+            Step::UpLeft => [song::Panel::Step, song::Panel::None, song::Panel::Step, song::Panel::None],
+            Step::LeftRight => [song::Panel::Step, song::Panel::None, song::Panel::None, song::Panel::Step],
+            Step::UpDown => [song::Panel::None, song::Panel::Step, song::Panel::Step, song::Panel::None],
+            Step::DownRight => [song::Panel::None, song::Panel::Step, song::Panel::None, song::Panel::Step],
+            Step::UpRight => [song::Panel::None, song::Panel::None, song::Panel::Step, song::Panel::Step],
         }
     }
 }
@@ -134,6 +156,86 @@ impl<'de> Deserialize<'de> for Steps {
         }
 
         deserializer.deserialize_bytes(StepsVisitor)
+    }
+}
+
+impl From<Steps> for song::Steps<4> {
+    fn from(msd_steps: Steps) -> Self {
+        let mut steps = Vec::new();
+
+        for notes in msd_steps.notes {
+            match notes {
+                Notes::Eighth(step) => {
+                    steps.push(song::Step {
+                        panels: step.into(),
+                        duration: song::Duration::Eighth,
+                    });
+                }
+            }
+        }
+
+        song::Steps { steps }
+    }
+}
+
+impl From<(Steps, Steps)> for song::Steps<8> {
+    fn from(msd_steps: (Steps, Steps)) -> Self {
+        let mut steps = Vec::new();
+
+        // Combines the notes from both step charts into a single iterator, accounting for differing length as well.
+        let notes_0_len = msd_steps.0.notes.len();
+        let notes_1_len = msd_steps.1.notes.len();
+        let notes_iter = if notes_0_len > notes_1_len {
+            Either::Left(Either::Left(
+                msd_steps.0.notes.into_iter().zip(
+                    msd_steps.1.notes.into_iter().chain(
+                        iter::repeat(Notes::Eighth(Step::None))
+                            .take(notes_0_len - notes_1_len),
+                    ),
+                ),
+            ))
+        } else if notes_0_len < notes_1_len {
+            Either::Left(Either::Right(
+                msd_steps
+                    .0
+                    .notes
+                    .into_iter()
+                    .chain(
+                        iter::repeat(Notes::Eighth(Step::None))
+                            .take(notes_0_len - notes_1_len),
+                    )
+                    .zip(msd_steps.1.notes.into_iter()),
+            ))
+        } else {
+            Either::Right(
+                msd_steps
+                    .0
+                    .notes
+                    .into_iter()
+                    .zip(msd_steps.1.notes.into_iter()),
+            )
+        };
+
+        for (left_notes, right_notes) in notes_iter {
+            match (left_notes, right_notes) {
+                (Notes::Eighth(left_step), Notes::Eighth(right_step)) => {
+                    steps.push(song::Step {
+                        panels: {
+                            let mut whole = MaybeUninit::uninit();
+                            let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                            unsafe {
+                                ptr.write(left_step.into());
+                                ptr.add(1).write(right_step.into());
+                                whole.assume_init()
+                            }
+                        },
+                        duration: song::Duration::Eighth,
+                    })
+                }
+            }
+        }
+
+        song::Steps { steps }
     }
 }
 
@@ -454,6 +556,52 @@ impl<'de> Deserialize<'de> for Song {
             "DOUBLE", "COUPLE",
         ];
         deserializer.deserialize_struct("Song", FIELDS, SongVisitor)
+    }
+}
+
+impl From<Song> for song::Song {
+    fn from(song: Song) -> Self {
+        let mut charts = Vec::new();
+
+        for single in song.single {
+            charts.push(song::Chart {
+                difficulty: single.0.into(),
+                meter: single.1,
+                style: song::Style::Single(single.2.into()),
+            })
+        }
+
+        for double in song.double {
+            charts.push(song::Chart {
+                difficulty: double.0.into(),
+                meter: double.1,
+                style: song::Style::Double((double.2, double.3).into()),
+            })
+        }
+
+        for couple in song.couple {
+            charts.push(song::Chart {
+                difficulty: couple.0.into(),
+                meter: couple.1,
+                style: song::Style::Couple((couple.2, couple.3).into()),
+            })
+        }
+
+        song::Song {
+            title: song.title,
+            subtitle: None,
+            artist: song.artist,
+            credit: song.msd,
+
+            bpm: song.bpm,
+            offset: song.gap,
+
+            background_file: song.back,
+            music_preview_file: song.select,
+            music_file: song.bgm,
+
+            charts: charts,
+        }
     }
 }
 
