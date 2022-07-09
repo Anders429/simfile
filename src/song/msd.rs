@@ -338,6 +338,16 @@ impl<'de> Deserialize<'de> for Difficulty {
     }
 }
 
+impl From<Difficulty> for song::Difficulty {
+    fn from(difficulty: Difficulty) -> Self {
+        match difficulty {
+            Difficulty::Basic => song::Difficulty::Easy,
+            Difficulty::Another => song::Difficulty::Medium,
+            Difficulty::Maniac => song::Difficulty::Hard,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub(in crate::song) struct Song {
     pub(in crate::song) file: Option<String>,

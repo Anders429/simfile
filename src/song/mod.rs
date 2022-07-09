@@ -54,16 +54,6 @@ pub enum Difficulty {
     Edit,
 }
 
-impl From<msd::Difficulty> for Difficulty {
-    fn from(difficulty: msd::Difficulty) -> Self {
-        match difficulty {
-            msd::Difficulty::Basic => Difficulty::Easy,
-            msd::Difficulty::Another => Difficulty::Medium,
-            msd::Difficulty::Maniac => Difficulty::Hard,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct Chart {
     difficulty: Difficulty,
