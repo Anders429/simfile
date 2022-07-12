@@ -6,9 +6,9 @@ use serde::{
 };
 use std::{cmp::Ordering, fmt, iter, mem::MaybeUninit, str};
 
-/// All valid step combinations, according to the MSD specification.
+/// All valid panel combinations, according to the MSD specification.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::song) enum Step {
+pub(in crate::song) enum Panels {
     None,
     Up,
     Right,
@@ -22,7 +22,7 @@ pub(in crate::song) enum Step {
     LeftRight,
 }
 
-impl Step {
+impl Panels {
     fn as_serialized_byte(&self) -> u8 {
         match self {
             Self::None => b'0',
@@ -63,65 +63,65 @@ impl Step {
     }
 }
 
-impl From<Step> for [song::Panel; 4] {
-    fn from(step: Step) -> Self {
+impl From<Panels> for [song::Panel; 4] {
+    fn from(step: Panels) -> Self {
         match step {
-            Step::None => [song::Panel::None; 4],
-            Step::Left => [
+            Panels::None => [song::Panel::None; 4],
+            Panels::Left => [
                 song::Panel::Step,
                 song::Panel::None,
                 song::Panel::None,
                 song::Panel::None,
             ],
-            Step::Down => [
+            Panels::Down => [
                 song::Panel::None,
                 song::Panel::Step,
                 song::Panel::None,
                 song::Panel::None,
             ],
-            Step::Up => [
+            Panels::Up => [
                 song::Panel::None,
                 song::Panel::None,
                 song::Panel::Step,
                 song::Panel::None,
             ],
-            Step::Right => [
+            Panels::Right => [
                 song::Panel::None,
                 song::Panel::None,
                 song::Panel::None,
                 song::Panel::Step,
             ],
-            Step::DownLeft => [
+            Panels::DownLeft => [
                 song::Panel::Step,
                 song::Panel::Step,
                 song::Panel::None,
                 song::Panel::None,
             ],
-            Step::UpLeft => [
+            Panels::UpLeft => [
                 song::Panel::Step,
                 song::Panel::None,
                 song::Panel::Step,
                 song::Panel::None,
             ],
-            Step::LeftRight => [
+            Panels::LeftRight => [
                 song::Panel::Step,
                 song::Panel::None,
                 song::Panel::None,
                 song::Panel::Step,
             ],
-            Step::UpDown => [
+            Panels::UpDown => [
                 song::Panel::None,
                 song::Panel::Step,
                 song::Panel::Step,
                 song::Panel::None,
             ],
-            Step::DownRight => [
+            Panels::DownRight => [
                 song::Panel::None,
                 song::Panel::Step,
                 song::Panel::None,
                 song::Panel::Step,
             ],
-            Step::UpRight => [
+            Panels::UpRight => [
                 song::Panel::None,
                 song::Panel::None,
                 song::Panel::Step,
@@ -133,8 +133,8 @@ impl From<Step> for [song::Panel; 4] {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::song) enum Notes {
-    Eighth(Step),
-    Sixteenth(Step),
+    Eighth(Panels),
+    Sixteenth(Panels),
 }
 
 impl Notes {
@@ -170,9 +170,9 @@ impl Notes {
         }
     }
 
-    fn step(&self) -> Step {
+    fn panels(&self) -> Panels {
         match self {
-            Notes::Eighth(step) | Notes::Sixteenth(step) => *step,
+            Notes::Eighth(panels) | Notes::Sixteenth(panels) => *panels,
         }
     }
 
@@ -182,13 +182,13 @@ impl Notes {
         // Convert step.
         if 24 <= length {
             steps.push(song::Step {
-                panels: self.step().into(),
+                panels: self.panels().into(),
                 duration: song::Duration::Eighth,
             });
             length -= 24;
         } else if 12 <= length {
             steps.push(song::Step {
-                panels: self.step().into(),
+                panels: self.panels().into(),
                 duration: song::Duration::Sixteenth,
             });
             length -= 12;
@@ -201,13 +201,13 @@ impl Notes {
         while length > 0 {
             if 24 <= length {
                 steps.push(song::Step {
-                    panels: Step::None.into(),
+                    panels: Panels::None.into(),
                     duration: song::Duration::Eighth,
                 });
                 length -= 24;
             } else if 12 <= length {
                 steps.push(song::Step {
-                    panels: Step::None.into(),
+                    panels: Panels::None.into(),
                     duration: song::Duration::Sixteenth,
                 });
                 length -= 12;
@@ -305,9 +305,9 @@ impl<'de> Deserialize<'de> for Steps {
                         _ => {}
                     }
                     if sixteenth {
-                        notes.push(Notes::Sixteenth(Step::from_serialized_byte(byte)?));
+                        notes.push(Notes::Sixteenth(Panels::from_serialized_byte(byte)?));
                     } else {
-                        notes.push(Notes::Eighth(Step::from_serialized_byte(byte)?));
+                        notes.push(Notes::Eighth(Panels::from_serialized_byte(byte)?));
                     }
                 }
                 Ok(Steps { notes })
@@ -367,8 +367,8 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                             let mut whole = MaybeUninit::uninit();
                                             let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                             unsafe {
-                                                ptr.write(left_notes.step().into());
-                                                ptr.add(1).write(right_notes.step().into());
+                                                ptr.write(left_notes.panels().into());
+                                                ptr.add(1).write(right_notes.panels().into());
                                                 whole.assume_init()
                                             }
                                         },
@@ -381,8 +381,8 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                             let mut whole = MaybeUninit::uninit();
                                             let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                             unsafe {
-                                                ptr.write(left_notes.step().into());
-                                                ptr.add(1).write(right_notes.step().into());
+                                                ptr.write(left_notes.panels().into());
+                                                ptr.add(1).write(right_notes.panels().into());
                                                 whole.assume_init()
                                             }
                                         },
@@ -402,8 +402,8 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                         let mut whole = MaybeUninit::uninit();
                                         let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                         unsafe {
-                                            ptr.write(notes.step().into());
-                                            ptr.add(1).write(Step::None.into());
+                                            ptr.write(notes.panels().into());
+                                            ptr.add(1).write(Panels::None.into());
                                             whole.assume_init()
                                         }
                                     },
@@ -419,8 +419,8 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                         let mut whole = MaybeUninit::uninit();
                                         let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                         unsafe {
-                                            ptr.write(Step::None.into());
-                                            ptr.add(1).write(notes.step().into());
+                                            ptr.write(Panels::None.into());
+                                            ptr.add(1).write(notes.panels().into());
                                             whole.assume_init()
                                         }
                                     },
@@ -449,7 +449,7 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                             let mut whole = MaybeUninit::uninit();
                                             let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                             unsafe {
-                                                ptr.write(Step::None.into());
+                                                ptr.write(Panels::None.into());
                                                 ptr.add(1).write(step.panels);
                                                 whole.assume_init()
                                             }
@@ -463,8 +463,8 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                         let mut whole = MaybeUninit::uninit();
                                         let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                         unsafe {
-                                            ptr.write(Step::None.into());
-                                            ptr.add(1).write(notes.step().into());
+                                            ptr.write(Panels::None.into());
+                                            ptr.add(1).write(notes.panels().into());
                                             whole.assume_init()
                                         }
                                     },
@@ -481,8 +481,8 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                         let mut whole = MaybeUninit::uninit();
                                         let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                         unsafe {
-                                            ptr.write(notes.step().into());
-                                            ptr.add(1).write(Step::None.into());
+                                            ptr.write(notes.panels().into());
+                                            ptr.add(1).write(Panels::None.into());
                                             whole.assume_init()
                                         }
                                     },
@@ -509,7 +509,7 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                             let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                             unsafe {
                                                 ptr.write(step.panels);
-                                                ptr.add(1).write(Step::None.into());
+                                                ptr.add(1).write(Panels::None.into());
                                                 whole.assume_init()
                                             }
                                         },
@@ -522,8 +522,8 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                         let mut whole = MaybeUninit::uninit();
                                         let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                         unsafe {
-                                            ptr.write(notes.step().into());
-                                            ptr.add(1).write(Step::None.into());
+                                            ptr.write(notes.panels().into());
+                                            ptr.add(1).write(Panels::None.into());
                                             whole.assume_init()
                                         }
                                     },
@@ -540,8 +540,8 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                         let mut whole = MaybeUninit::uninit();
                                         let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                         unsafe {
-                                            ptr.write(Step::None.into());
-                                            ptr.add(1).write(notes.step().into());
+                                            ptr.write(Panels::None.into());
+                                            ptr.add(1).write(notes.panels().into());
                                             whole.assume_init()
                                         }
                                     },
@@ -963,10 +963,10 @@ mod tests {
         assert_tokens(
             &Steps {
                 notes: vec![
-                    Notes::Eighth(Step::Up),
-                    Notes::Eighth(Step::LeftRight),
-                    Notes::Eighth(Step::None),
-                    Notes::Eighth(Step::DownRight),
+                    Notes::Eighth(Panels::Up),
+                    Notes::Eighth(Panels::LeftRight),
+                    Notes::Eighth(Panels::None),
+                    Notes::Eighth(Panels::DownRight),
                 ],
             },
             &[Token::Bytes(b"8B03")],
@@ -1025,10 +1025,10 @@ mod tests {
                         4,
                         Steps {
                             notes: vec![
-                                Notes::Eighth(Step::Up),
-                                Notes::Eighth(Step::None),
-                                Notes::Eighth(Step::Down),
-                                Notes::Eighth(Step::Right),
+                                Notes::Eighth(Panels::Up),
+                                Notes::Eighth(Panels::None),
+                                Notes::Eighth(Panels::Down),
+                                Notes::Eighth(Panels::Right),
                             ],
                         },
                     ),
@@ -1037,10 +1037,10 @@ mod tests {
                         7,
                         Steps {
                             notes: vec![
-                                Notes::Eighth(Step::UpDown),
-                                Notes::Eighth(Step::UpLeft),
-                                Notes::Eighth(Step::None),
-                                Notes::Eighth(Step::Up),
+                                Notes::Eighth(Panels::UpDown),
+                                Notes::Eighth(Panels::UpLeft),
+                                Notes::Eighth(Panels::None),
+                                Notes::Eighth(Panels::Up),
                             ],
                         },
                     ),
@@ -1050,18 +1050,18 @@ mod tests {
                     9,
                     Steps {
                         notes: vec![
-                            Notes::Eighth(Step::Down),
-                            Notes::Eighth(Step::Down),
-                            Notes::Eighth(Step::Down),
-                            Notes::Eighth(Step::Down),
+                            Notes::Eighth(Panels::Down),
+                            Notes::Eighth(Panels::Down),
+                            Notes::Eighth(Panels::Down),
+                            Notes::Eighth(Panels::Down),
                         ],
                     },
                     Steps {
                         notes: vec![
-                            Notes::Eighth(Step::Up),
-                            Notes::Eighth(Step::Down),
-                            Notes::Eighth(Step::LeftRight),
-                            Notes::Eighth(Step::DownLeft),
+                            Notes::Eighth(Panels::Up),
+                            Notes::Eighth(Panels::Down),
+                            Notes::Eighth(Panels::LeftRight),
+                            Notes::Eighth(Panels::DownLeft),
                         ],
                     },
                 )],
@@ -1071,18 +1071,18 @@ mod tests {
                         2,
                         Steps {
                             notes: vec![
-                                Notes::Eighth(Step::UpRight),
-                                Notes::Eighth(Step::Down),
-                                Notes::Eighth(Step::DownRight),
-                                Notes::Eighth(Step::None),
+                                Notes::Eighth(Panels::UpRight),
+                                Notes::Eighth(Panels::Down),
+                                Notes::Eighth(Panels::DownRight),
+                                Notes::Eighth(Panels::None),
                             ],
                         },
                         Steps {
                             notes: vec![
-                                Notes::Eighth(Step::Up),
-                                Notes::Eighth(Step::Up),
-                                Notes::Eighth(Step::UpDown),
-                                Notes::Eighth(Step::Up),
+                                Notes::Eighth(Panels::Up),
+                                Notes::Eighth(Panels::Up),
+                                Notes::Eighth(Panels::UpDown),
+                                Notes::Eighth(Panels::Up),
                             ],
                         },
                     ),
@@ -1091,18 +1091,18 @@ mod tests {
                         6,
                         Steps {
                             notes: vec![
-                                Notes::Eighth(Step::None),
-                                Notes::Eighth(Step::None),
-                                Notes::Eighth(Step::None),
-                                Notes::Eighth(Step::None),
+                                Notes::Eighth(Panels::None),
+                                Notes::Eighth(Panels::None),
+                                Notes::Eighth(Panels::None),
+                                Notes::Eighth(Panels::None),
                             ],
                         },
                         Steps {
                             notes: vec![
-                                Notes::Eighth(Step::Left),
-                                Notes::Eighth(Step::Up),
-                                Notes::Eighth(Step::Right),
-                                Notes::Eighth(Step::Down),
+                                Notes::Eighth(Panels::Left),
+                                Notes::Eighth(Panels::Up),
+                                Notes::Eighth(Panels::Right),
+                                Notes::Eighth(Panels::Down),
                             ],
                         },
                     ),
@@ -1201,19 +1201,19 @@ mod tests {
     fn double_steps_into_generic_steps() {
         let steps_0 = Steps {
             notes: vec![
-                Notes::Eighth(Step::Up),
-                Notes::Sixteenth(Step::Down),
-                Notes::Eighth(Step::Right),
-                Notes::Sixteenth(Step::Left),
+                Notes::Eighth(Panels::Up),
+                Notes::Sixteenth(Panels::Down),
+                Notes::Eighth(Panels::Right),
+                Notes::Sixteenth(Panels::Left),
             ],
         };
         let steps_1 = Steps {
             notes: vec![
-                Notes::Sixteenth(Step::Up),
-                Notes::Sixteenth(Step::Down),
-                Notes::Eighth(Step::Right),
-                Notes::Sixteenth(Step::UpDown),
-                Notes::Sixteenth(Step::Left),
+                Notes::Sixteenth(Panels::Up),
+                Notes::Sixteenth(Panels::Down),
+                Notes::Eighth(Panels::Right),
+                Notes::Sixteenth(Panels::UpDown),
+                Notes::Sixteenth(Panels::Left),
             ],
         };
 
