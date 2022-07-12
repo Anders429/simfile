@@ -15,25 +15,26 @@ pub enum Error {
     Deserialization(::msd::de::Error),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Panel {
     None,
     Step,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Duration {
     Eighth,
+    Sixteenth,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Step<const PANELS: usize> {
     panels: [Panel; PANELS],
     /// Duration after this step until the next step.
     duration: Duration,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Steps<const PANELS: usize> {
     steps: Vec<Step<PANELS>>,
 }
@@ -99,6 +100,6 @@ mod tests {
 
     #[test]
     fn test() {
-        dbg!(Song::from_msd("test/data/msd/BAD.msd"));
+        dbg!(Song::from_msd("test/data/msd/AM3P.msd"));
     }
 }

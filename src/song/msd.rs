@@ -5,10 +5,10 @@ use serde::{
     ser::SerializeStruct,
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use std::{fmt, iter, mem::MaybeUninit, str};
+use std::{cmp, cmp::Ordering, fmt, iter, mem::MaybeUninit, str};
 
 /// All valid step combinations, according to the MSD specification.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::song) enum Step {
     None,
     Up,
@@ -132,23 +132,112 @@ impl From<Step> for [song::Panel; 4] {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::song) enum Notes {
     Eighth(Step),
+    Sixteenth(Step),
 }
 
 impl Notes {
-    fn serialization_capacity_requirement(&self) -> usize {
+    fn serialization_capacity_requirement(&self, previous: Option<Self>) -> usize {
         match self {
-            Notes::Eighth(_) => 1,
+            Notes::Eighth(_) => 1 + matches!(previous, Some(Notes::Sixteenth(_))) as usize,
+            Notes::Sixteenth(_) => 1 + !matches!(previous, Some(Notes::Sixteenth(_))) as usize,
         }
     }
 
-    fn serialize_to_bytes(&self, bytes: &mut Vec<u8>) {
+    fn serialize_to_bytes(&self, bytes: &mut Vec<u8>, previous: Option<Self>) {
         match self {
             Notes::Eighth(step) => {
+                if matches!(previous, Some(Notes::Sixteenth(_))) {
+                    bytes.push(b')');
+                }
                 bytes.push(step.as_serialized_byte());
             }
+            Notes::Sixteenth(step) => {
+                if !matches!(previous, Some(Notes::Sixteenth(_))) {
+                    bytes.push(b'(');
+                }
+                bytes.push(step.as_serialized_byte());
+            }
+        }
+    }
+
+    /// How many 192nd notes this value takes up.
+    fn as_isize(&self) -> isize {
+        match self {
+            Notes::Eighth(_) => 24,
+            Notes::Sixteenth(_) => 12,
+        }
+    }
+
+    fn step(&self) -> Step {
+        match self {
+            Notes::Eighth(step) | Notes::Sixteenth(step) => *step,
+        }
+    }
+
+    fn into_steps_for_length(&self, mut length: isize) -> Vec<song::Step<4>> {
+        let mut steps = Vec::new();
+
+        // Convert step.
+        if 24 <= length {
+            steps.push(song::Step {
+                panels: self.step().into(),
+                duration: song::Duration::Eighth,
+            });
+            length -= 24;
+        } else if 12 <= length {
+            steps.push(song::Step {
+                panels: self.step().into(),
+                duration: song::Duration::Sixteenth,
+            });
+            length -= 12;
+        } else {
+            // Shouldn't ever get here.
+            unreachable!()
+        }
+
+        // Fill rest of space.
+        while length > 0 {
+            if 24 <= length {
+                steps.push(song::Step {
+                    panels: Step::None.into(),
+                    duration: song::Duration::Eighth,
+                });
+                length -= 24;
+            } else if 12 <= length {
+                steps.push(song::Step {
+                    panels: Step::None.into(),
+                    duration: song::Duration::Sixteenth,
+                });
+                length -= 12;
+            } else {
+                // Shouldn't ever get here.
+                unreachable!()
+            }
+        }
+        steps
+    }
+}
+
+impl PartialOrd for Notes {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Notes {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.as_isize().cmp(&other.as_isize())
+    }
+}
+
+impl From<Notes> for song::Duration {
+    fn from(notes: Notes) -> Self {
+        match notes {
+            Notes::Eighth(_) => song::Duration::Eighth,
+            Notes::Sixteenth(_) => song::Duration::Sixteenth,
         }
     }
 }
@@ -163,14 +252,19 @@ impl Serialize for Steps {
     where
         S: Serializer,
     {
-        let mut result = Vec::with_capacity(
-            self.notes
-                .iter()
-                .map(|notes| notes.serialization_capacity_requirement())
-                .sum(),
-        );
-        for notes in &self.notes {
-            notes.serialize_to_bytes(&mut result);
+        let mut result = Vec::with_capacity({
+            let mut previous = None;
+            let mut sum = 0;
+            for &notes in &self.notes {
+                sum += notes.serialization_capacity_requirement(previous);
+                previous = Some(notes);
+            }
+            sum
+        });
+        let mut previous = None;
+        for &notes in &self.notes {
+            notes.serialize_to_bytes(&mut result, previous);
+            previous = Some(notes);
         }
         serializer.serialize_bytes(&result)
     }
@@ -196,8 +290,26 @@ impl<'de> Deserialize<'de> for Steps {
             {
                 // TODO: Make this capacity approximation more intelligent.
                 let mut notes = Vec::with_capacity(bytes.len());
+                // TODO: Separate out the duration into a separate enum, distinct from the step.
+                // Then this part will scale better with other granularities.
+                let mut sixteenth = false;
                 for &byte in bytes.iter().filter(|b| !b.is_ascii_whitespace()) {
-                    notes.push(Notes::Eighth(Step::from_serialized_byte(byte)?));
+                    match byte {
+                        b'(' => {
+                            sixteenth = true;
+                            continue;
+                        }
+                        b')' => {
+                            sixteenth = false;
+                            continue;
+                        }
+                        _ => {}
+                    }
+                    if sixteenth {
+                        notes.push(Notes::Sixteenth(Step::from_serialized_byte(byte)?));
+                    } else {
+                        notes.push(Notes::Eighth(Step::from_serialized_byte(byte)?));
+                    }
                 }
                 Ok(Steps { notes })
             }
@@ -219,6 +331,12 @@ impl From<Steps> for song::Steps<4> {
                         duration: song::Duration::Eighth,
                     });
                 }
+                Notes::Sixteenth(step) => {
+                    steps.push(song::Step {
+                        panels: step.into(),
+                        duration: song::Duration::Sixteenth,
+                    });
+                }
             }
         }
 
@@ -230,51 +348,211 @@ impl From<(Steps, Steps)> for song::Steps<8> {
     fn from(msd_steps: (Steps, Steps)) -> Self {
         let mut steps = Vec::new();
 
-        // Combines the notes from both step charts into a single iterator, accounting for differing length as well.
-        let notes_0_len = msd_steps.0.notes.len();
-        let notes_1_len = msd_steps.1.notes.len();
-        let notes_iter =
-            if notes_0_len > notes_1_len {
-                Either::Left(Either::Left(msd_steps.0.notes.into_iter().zip(
-                    msd_steps.1.notes.into_iter().chain(
-                        iter::repeat(Notes::Eighth(Step::None)).take(notes_0_len - notes_1_len),
-                    ),
-                )))
-            } else if notes_0_len < notes_1_len {
-                Either::Left(Either::Right(
-                    msd_steps
-                        .0
-                        .notes
-                        .into_iter()
-                        .chain(
-                            iter::repeat(Notes::Eighth(Step::None)).take(notes_0_len - notes_1_len),
-                        )
-                        .zip(msd_steps.1.notes.into_iter()),
-                ))
-            } else {
-                Either::Right(
-                    msd_steps
-                        .0
-                        .notes
-                        .into_iter()
-                        .zip(msd_steps.1.notes.into_iter()),
-                )
-            };
+        // If both are at same point, pop them both and add.
+        // If one is ahead of the other, pop that one only and add.
 
-        for (left_notes, right_notes) in notes_iter {
-            match (left_notes, right_notes) {
-                (Notes::Eighth(left_step), Notes::Eighth(right_step)) => steps.push(song::Step {
-                    panels: {
-                        let mut whole = MaybeUninit::uninit();
-                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
-                        unsafe {
-                            ptr.write(left_step.into());
-                            ptr.add(1).write(right_step.into());
-                            whole.assume_init()
+        // If this is positive, then right side is ahead. If negative, then left side is ahead.
+        let mut alignment = 0;
+        let mut notes_0 = msd_steps.0.notes.iter();
+        let mut notes_1 = msd_steps.1.notes.iter();
+        loop {
+            match alignment.cmp(&0) {
+                Ordering::Equal => {
+                    match (notes_0.next(), notes_1.next()) {
+                        (Some(&left_notes), Some(&right_notes)) => {
+                            // Find with duration to use.
+                            match left_notes.cmp(&right_notes) {
+                                Ordering::Equal | Ordering::Less => {
+                                    steps.push(song::Step {
+                                        panels: {
+                                            let mut whole = MaybeUninit::uninit();
+                                            let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                                            unsafe {
+                                                ptr.write(left_notes.step().into());
+                                                ptr.add(1).write(right_notes.step().into());
+                                                whole.assume_init()
+                                            }
+                                        },
+                                        duration: left_notes.into(),
+                                    });
+                                }
+                                Ordering::Greater => {
+                                    steps.push(song::Step {
+                                        panels: {
+                                            let mut whole = MaybeUninit::uninit();
+                                            let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                                            unsafe {
+                                                ptr.write(left_notes.step().into());
+                                                ptr.add(1).write(right_notes.step().into());
+                                                whole.assume_init()
+                                            }
+                                        },
+                                        duration: right_notes.into(),
+                                    });
+                                }
+                            }
+                            // Remember where the notes are currently aligned to.
+                            // Note that these values may be the opposite of what you intuitively
+                            // think, as they represent the denominators of their note durations.
+                            alignment = left_notes.as_isize() - right_notes.as_isize();
                         }
-                    },
-                    duration: song::Duration::Eighth,
-                }),
+                        (Some(left_notes), None) => {
+                            for &notes in iter::once(left_notes).chain(notes_0) {
+                                steps.push(song::Step {
+                                    panels: {
+                                        let mut whole = MaybeUninit::uninit();
+                                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                                        unsafe {
+                                            ptr.write(notes.step().into());
+                                            ptr.add(1).write(Step::None.into());
+                                            whole.assume_init()
+                                        }
+                                    },
+                                    duration: notes.into(),
+                                });
+                            }
+                            break;
+                        }
+                        (None, Some(right_notes)) => {
+                            for &notes in iter::once(right_notes).chain(notes_1) {
+                                steps.push(song::Step {
+                                    panels: {
+                                        let mut whole = MaybeUninit::uninit();
+                                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                                        unsafe {
+                                            ptr.write(Step::None.into());
+                                            ptr.add(1).write(notes.step().into());
+                                            whole.assume_init()
+                                        }
+                                    },
+                                    duration: notes.into(),
+                                });
+                            }
+                            break;
+                        }
+                        (None, None) => {
+                            break;
+                        }
+                    }
+                }
+                Ordering::Greater => {
+                    // Just do the right side.
+                    match notes_1.next() {
+                        Some(&notes) => {
+                            // Find duration.
+                            let duration_value = notes.as_isize();
+                            if duration_value > alignment {
+                                // Take care not to skip past the other side's note.
+                                for step in notes.into_steps_for_length(duration_value - alignment)
+                                {
+                                    steps.push(song::Step {
+                                        panels: {
+                                            let mut whole = MaybeUninit::uninit();
+                                            let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                                            unsafe {
+                                                ptr.write(Step::None.into());
+                                                ptr.add(1).write(step.panels);
+                                                whole.assume_init()
+                                            }
+                                        },
+                                        duration: step.duration,
+                                    });
+                                }
+                            } else {
+                                steps.push(song::Step {
+                                    panels: {
+                                        let mut whole = MaybeUninit::uninit();
+                                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                                        unsafe {
+                                            ptr.write(Step::None.into());
+                                            ptr.add(1).write(notes.step().into());
+                                            whole.assume_init()
+                                        }
+                                    },
+                                    duration: notes.into(),
+                                });
+                            }
+
+                            alignment -= duration_value;
+                        }
+                        None => {
+                            for &notes in notes_0 {
+                                steps.push(song::Step {
+                                    panels: {
+                                        let mut whole = MaybeUninit::uninit();
+                                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                                        unsafe {
+                                            ptr.write(notes.step().into());
+                                            ptr.add(1).write(Step::None.into());
+                                            whole.assume_init()
+                                        }
+                                    },
+                                    duration: notes.into(),
+                                });
+                            }
+                            break;
+                        }
+                    }
+                }
+                Ordering::Less => {
+                    // Just do the left side.
+                    match notes_0.next() {
+                        Some(&notes) => {
+                            // Find duration.
+                            let duration_value = notes.as_isize();
+                            if duration_value > -alignment {
+                                // Take care not to skip past the other side's note.
+                                for step in notes.into_steps_for_length(duration_value + alignment)
+                                {
+                                    steps.push(song::Step {
+                                        panels: {
+                                            let mut whole = MaybeUninit::uninit();
+                                            let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                                            unsafe {
+                                                ptr.write(step.panels);
+                                                ptr.add(1).write(Step::None.into());
+                                                whole.assume_init()
+                                            }
+                                        },
+                                        duration: step.duration,
+                                    });
+                                }
+                            } else {
+                                steps.push(song::Step {
+                                    panels: {
+                                        let mut whole = MaybeUninit::uninit();
+                                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                                        unsafe {
+                                            ptr.write(notes.step().into());
+                                            ptr.add(1).write(Step::None.into());
+                                            whole.assume_init()
+                                        }
+                                    },
+                                    duration: notes.into(),
+                                });
+                            }
+
+                            alignment += duration_value;
+                        }
+                        None => {
+                            for &notes in notes_1 {
+                                steps.push(song::Step {
+                                    panels: {
+                                        let mut whole = MaybeUninit::uninit();
+                                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                                        unsafe {
+                                            ptr.write(Step::None.into());
+                                            ptr.add(1).write(notes.step().into());
+                                            whole.assume_init()
+                                        }
+                                    },
+                                    duration: notes.into(),
+                                });
+                            }
+                            break;
+                        }
+                    }
+                }
             }
         }
 
@@ -673,6 +951,7 @@ impl From<Song> for song::Song {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::song;
     use serde_test::{assert_tokens, Token};
 
     #[test]
@@ -729,7 +1008,7 @@ mod tests {
     }
 
     #[test]
-    fn msd_ser_de_full() {
+    fn song_ser_de_full() {
         assert_tokens(
             &Song {
                 file: Some("file".to_string()),
@@ -917,5 +1196,109 @@ mod tests {
                 Token::StructEnd,
             ],
         )
+    }
+
+    #[test]
+    fn double_steps_into_generic_steps() {
+        let steps_0 = Steps {
+            notes: vec![
+                Notes::Eighth(Step::Up),
+                Notes::Sixteenth(Step::Down),
+                Notes::Eighth(Step::Right),
+                Notes::Sixteenth(Step::Left),
+            ],
+        };
+        let steps_1 = Steps {
+            notes: vec![
+                Notes::Sixteenth(Step::Up),
+                Notes::Sixteenth(Step::Down),
+                Notes::Eighth(Step::Right),
+                Notes::Sixteenth(Step::UpDown),
+                Notes::Sixteenth(Step::Left),
+            ],
+        };
+
+        assert_eq!(song::Steps::from((steps_0, steps_1)), song::Steps {
+            steps: vec![
+                song::Step {
+                    panels: [
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::Step,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::Step,
+                        song::Panel::None,
+                    ],
+                    duration: song::Duration::Sixteenth,
+                },
+                song::Step {
+                    panels: [
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::Step,
+                        song::Panel::None,
+                        song::Panel::None,
+                    ],
+                    duration: song::Duration::Sixteenth,
+                },
+                song::Step {
+                    panels: [
+                        song::Panel::None,
+                        song::Panel::Step,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::Step,
+                    ],
+                    duration: song::Duration::Sixteenth,
+                },
+                song::Step {
+                    panels: [
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::Step,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                    ],
+                    duration: song::Duration::Sixteenth,
+                },
+                song::Step {
+                    panels: [
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::Step,
+                        song::Panel::Step,
+                        song::Panel::None,
+                    ],
+                    duration: song::Duration::Sixteenth,
+                },
+                song::Step {
+                    panels: [
+                        song::Panel::Step,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::Step,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::None,
+                    ],
+                    duration: song::Duration::Sixteenth,
+                },
+            ],
+        });
     }
 }
