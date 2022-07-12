@@ -1,11 +1,10 @@
 use crate::song;
-use either::Either;
 use serde::{
     de::{EnumAccess, Error, MapAccess, Unexpected, VariantAccess, Visitor},
     ser::SerializeStruct,
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use std::{cmp, cmp::Ordering, fmt, iter, mem::MaybeUninit, str};
+use std::{cmp::Ordering, fmt, iter, mem::MaybeUninit, str};
 
 /// All valid step combinations, according to the MSD specification.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
