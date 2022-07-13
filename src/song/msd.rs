@@ -132,6 +132,118 @@ impl From<Panels> for [song::Panel; 4] {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Duration {
+    Eighth,
+    Sixteenth,
+}
+
+impl Duration {
+    fn serialization_capacity_requirement(&self, previous: Option<Self>) -> usize {
+        match self {
+            Duration::Eighth => 1 + matches!(previous, Some(Duration::Sixteenth)) as usize,
+            Duration::Sixteenth => 1 + !matches!(previous, Some(Duration::Sixteenth)) as usize,
+        }
+    }
+
+    /// How many 192nd notes this value takes up.
+    fn as_isize(&self) -> isize {
+        match self {
+            Self::Eighth => 24,
+            Self::Sixteenth => 12,
+        }
+    }
+}
+
+impl PartialOrd for Duration {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Duration {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.as_isize().cmp(&other.as_isize())
+    }
+}
+
+impl From<Duration> for song::Duration {
+    fn from(duration: Duration) -> Self {
+        match duration {
+            Duration::Eighth => song::Duration::Eighth,
+            Duration::Sixteenth => song::Duration::Sixteenth,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct Step {
+    panels: Panels,
+    duration: Duration,
+}
+
+impl Step {
+    fn serialize_to_bytes(&self, bytes: &mut Vec<u8>, previous: Option<Duration>) {
+        match self.duration {
+            Duration::Eighth => {
+                if matches!(previous, Some(Duration::Sixteenth)) {
+                    bytes.push(b')');
+                }
+                bytes.push(self.panels.as_serialized_byte());
+            }
+            Duration::Sixteenth => {
+                if !matches!(previous, Some(Duration::Sixteenth)) {
+                    bytes.push(b'(');
+                }
+                bytes.push(self.panels.as_serialized_byte());
+            }
+        }
+    }
+
+    fn into_steps_for_length(&self, mut length: isize) -> Vec<song::Step<4>> {
+        let mut steps = Vec::new();
+
+        // Convert step.
+        if 24 <= length {
+            steps.push(song::Step {
+                panels: self.panels.into(),
+                duration: song::Duration::Eighth,
+            });
+            length -= 24;
+        } else if 12 <= length {
+            steps.push(song::Step {
+                panels: self.panels.into(),
+                duration: song::Duration::Sixteenth,
+            });
+            length -= 12;
+        } else {
+            // Shouldn't ever get here.
+            unreachable!()
+        }
+
+        // Fill rest of space.
+        while length > 0 {
+            if 24 <= length {
+                steps.push(song::Step {
+                    panels: Panels::None.into(),
+                    duration: song::Duration::Eighth,
+                });
+                length -= 24;
+            } else if 12 <= length {
+                steps.push(song::Step {
+                    panels: Panels::None.into(),
+                    duration: song::Duration::Sixteenth,
+                });
+                length -= 12;
+            } else {
+                // Shouldn't ever get here.
+                unreachable!()
+            }
+        }
+        steps
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::song) enum Notes {
     Eighth(Panels),
     Sixteenth(Panels),
@@ -243,7 +355,7 @@ impl From<Notes> for song::Duration {
 
 #[derive(Debug, Eq, PartialEq)]
 pub(in crate::song) struct Steps {
-    pub(in crate::song) notes: Vec<Notes>,
+    steps: Vec<Step>,
 }
 
 impl Serialize for Steps {
@@ -254,16 +366,16 @@ impl Serialize for Steps {
         let mut result = Vec::with_capacity({
             let mut previous = None;
             let mut sum = 0;
-            for &notes in &self.notes {
-                sum += notes.serialization_capacity_requirement(previous);
-                previous = Some(notes);
+            for &step in &self.steps {
+                sum += step.duration.serialization_capacity_requirement(previous);
+                previous = Some(step.duration);
             }
             sum
         });
         let mut previous = None;
-        for &notes in &self.notes {
-            notes.serialize_to_bytes(&mut result, previous);
-            previous = Some(notes);
+        for &step in &self.steps {
+            step.serialize_to_bytes(&mut result, previous);
+            previous = Some(step.duration);
         }
         serializer.serialize_bytes(&result)
     }
@@ -288,7 +400,7 @@ impl<'de> Deserialize<'de> for Steps {
                 E: Error,
             {
                 // TODO: Make this capacity approximation more intelligent.
-                let mut notes = Vec::with_capacity(bytes.len());
+                let mut steps = Vec::with_capacity(bytes.len());
                 // TODO: Separate out the duration into a separate enum, distinct from the step.
                 // Then this part will scale better with other granularities.
                 let mut sixteenth = false;
@@ -305,12 +417,18 @@ impl<'de> Deserialize<'de> for Steps {
                         _ => {}
                     }
                     if sixteenth {
-                        notes.push(Notes::Sixteenth(Panels::from_serialized_byte(byte)?));
+                        steps.push(Step {
+                            panels: Panels::from_serialized_byte(byte)?,
+                            duration: Duration::Sixteenth,
+                        });
                     } else {
-                        notes.push(Notes::Eighth(Panels::from_serialized_byte(byte)?));
+                        steps.push(Step {
+                            panels: Panels::from_serialized_byte(byte)?,
+                            duration: Duration::Eighth,
+                        });
                     }
                 }
-                Ok(Steps { notes })
+                Ok(Steps { steps })
             }
         }
 
@@ -322,21 +440,11 @@ impl From<Steps> for song::Steps<4> {
     fn from(msd_steps: Steps) -> Self {
         let mut steps = Vec::new();
 
-        for notes in msd_steps.notes {
-            match notes {
-                Notes::Eighth(step) => {
-                    steps.push(song::Step {
-                        panels: step.into(),
-                        duration: song::Duration::Eighth,
-                    });
-                }
-                Notes::Sixteenth(step) => {
-                    steps.push(song::Step {
-                        panels: step.into(),
-                        duration: song::Duration::Sixteenth,
-                    });
-                }
-            }
+        for step in msd_steps.steps {
+            steps.push(song::Step {
+                panels: step.panels.into(),
+                duration: step.duration.into(),
+            });
         }
 
         song::Steps { steps }
@@ -352,27 +460,27 @@ impl From<(Steps, Steps)> for song::Steps<8> {
 
         // If this is positive, then right side is ahead. If negative, then left side is ahead.
         let mut alignment = 0;
-        let mut notes_0 = msd_steps.0.notes.iter();
-        let mut notes_1 = msd_steps.1.notes.iter();
+        let mut steps_0 = msd_steps.0.steps.iter();
+        let mut steps_1 = msd_steps.1.steps.iter();
         loop {
             match alignment.cmp(&0) {
                 Ordering::Equal => {
-                    match (notes_0.next(), notes_1.next()) {
-                        (Some(&left_notes), Some(&right_notes)) => {
+                    match (steps_0.next(), steps_1.next()) {
+                        (Some(&left_step), Some(&right_step)) => {
                             // Find with duration to use.
-                            match left_notes.cmp(&right_notes) {
+                            match left_step.duration.cmp(&right_step.duration) {
                                 Ordering::Equal | Ordering::Less => {
                                     steps.push(song::Step {
                                         panels: {
                                             let mut whole = MaybeUninit::uninit();
                                             let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                             unsafe {
-                                                ptr.write(left_notes.panels().into());
-                                                ptr.add(1).write(right_notes.panels().into());
+                                                ptr.write(left_step.panels.into());
+                                                ptr.add(1).write(right_step.panels.into());
                                                 whole.assume_init()
                                             }
                                         },
-                                        duration: left_notes.into(),
+                                        duration: left_step.duration.into(),
                                     });
                                 }
                                 Ordering::Greater => {
@@ -381,50 +489,50 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                             let mut whole = MaybeUninit::uninit();
                                             let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                             unsafe {
-                                                ptr.write(left_notes.panels().into());
-                                                ptr.add(1).write(right_notes.panels().into());
+                                                ptr.write(left_step.panels.into());
+                                                ptr.add(1).write(right_step.panels.into());
                                                 whole.assume_init()
                                             }
                                         },
-                                        duration: right_notes.into(),
+                                        duration: right_step.duration.into(),
                                     });
                                 }
                             }
                             // Remember where the notes are currently aligned to.
                             // Note that these values may be the opposite of what you intuitively
                             // think, as they represent the denominators of their note durations.
-                            alignment = left_notes.as_isize() - right_notes.as_isize();
+                            alignment = left_step.duration.as_isize() - right_step.duration.as_isize();
                         }
-                        (Some(left_notes), None) => {
-                            for &notes in iter::once(left_notes).chain(notes_0) {
+                        (Some(left_step), None) => {
+                            for &step in iter::once(left_step).chain(steps_0) {
                                 steps.push(song::Step {
                                     panels: {
                                         let mut whole = MaybeUninit::uninit();
                                         let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                         unsafe {
-                                            ptr.write(notes.panels().into());
+                                            ptr.write(step.panels.into());
                                             ptr.add(1).write(Panels::None.into());
                                             whole.assume_init()
                                         }
                                     },
-                                    duration: notes.into(),
+                                    duration: step.duration.into(),
                                 });
                             }
                             break;
                         }
-                        (None, Some(right_notes)) => {
-                            for &notes in iter::once(right_notes).chain(notes_1) {
+                        (None, Some(right_step)) => {
+                            for &step in iter::once(right_step).chain(steps_1) {
                                 steps.push(song::Step {
                                     panels: {
                                         let mut whole = MaybeUninit::uninit();
                                         let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                         unsafe {
                                             ptr.write(Panels::None.into());
-                                            ptr.add(1).write(notes.panels().into());
+                                            ptr.add(1).write(step.panels.into());
                                             whole.assume_init()
                                         }
                                     },
-                                    duration: notes.into(),
+                                    duration: step.duration.into(),
                                 });
                             }
                             break;
@@ -436,13 +544,13 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                 }
                 Ordering::Greater => {
                     // Just do the right side.
-                    match notes_1.next() {
-                        Some(&notes) => {
+                    match steps_1.next() {
+                        Some(&step) => {
                             // Find duration.
-                            let duration_value = notes.as_isize();
+                            let duration_value = step.duration.as_isize();
                             if duration_value > alignment {
                                 // Take care not to skip past the other side's note.
-                                for step in notes.into_steps_for_length(duration_value - alignment)
+                                for step in step.into_steps_for_length(duration_value - alignment)
                                 {
                                     steps.push(song::Step {
                                         panels: {
@@ -464,29 +572,29 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                         let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                         unsafe {
                                             ptr.write(Panels::None.into());
-                                            ptr.add(1).write(notes.panels().into());
+                                            ptr.add(1).write(step.panels.into());
                                             whole.assume_init()
                                         }
                                     },
-                                    duration: notes.into(),
+                                    duration: step.duration.into(),
                                 });
                             }
 
                             alignment -= duration_value;
                         }
                         None => {
-                            for &notes in notes_0 {
+                            for &step in steps_0 {
                                 steps.push(song::Step {
                                     panels: {
                                         let mut whole = MaybeUninit::uninit();
                                         let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                         unsafe {
-                                            ptr.write(notes.panels().into());
+                                            ptr.write(step.panels.into());
                                             ptr.add(1).write(Panels::None.into());
                                             whole.assume_init()
                                         }
                                     },
-                                    duration: notes.into(),
+                                    duration: step.duration.into(),
                                 });
                             }
                             break;
@@ -495,13 +603,13 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                 }
                 Ordering::Less => {
                     // Just do the left side.
-                    match notes_0.next() {
-                        Some(&notes) => {
+                    match steps_0.next() {
+                        Some(&step) => {
                             // Find duration.
-                            let duration_value = notes.as_isize();
+                            let duration_value = step.duration.as_isize();
                             if duration_value > -alignment {
                                 // Take care not to skip past the other side's note.
-                                for step in notes.into_steps_for_length(duration_value + alignment)
+                                for step in step.into_steps_for_length(duration_value + alignment)
                                 {
                                     steps.push(song::Step {
                                         panels: {
@@ -522,30 +630,30 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                         let mut whole = MaybeUninit::uninit();
                                         let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                         unsafe {
-                                            ptr.write(notes.panels().into());
+                                            ptr.write(step.panels.into());
                                             ptr.add(1).write(Panels::None.into());
                                             whole.assume_init()
                                         }
                                     },
-                                    duration: notes.into(),
+                                    duration: step.duration.into(),
                                 });
                             }
 
                             alignment += duration_value;
                         }
                         None => {
-                            for &notes in notes_1 {
+                            for &step in steps_1 {
                                 steps.push(song::Step {
                                     panels: {
                                         let mut whole = MaybeUninit::uninit();
                                         let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
                                         unsafe {
                                             ptr.write(Panels::None.into());
-                                            ptr.add(1).write(notes.panels().into());
+                                            ptr.add(1).write(step.panels.into());
                                             whole.assume_init()
                                         }
                                     },
-                                    duration: notes.into(),
+                                    duration: step.duration.into(),
                                 });
                             }
                             break;
@@ -955,18 +1063,30 @@ mod tests {
 
     #[test]
     fn steps_ser_de_empty() {
-        assert_tokens(&Steps { notes: Vec::new() }, &[Token::Bytes(b"")]);
+        assert_tokens(&Steps { steps: Vec::new() }, &[Token::Bytes(b"")]);
     }
 
     #[test]
     fn steps_ser_de_eighths() {
         assert_tokens(
             &Steps {
-                notes: vec![
-                    Notes::Eighth(Panels::Up),
-                    Notes::Eighth(Panels::LeftRight),
-                    Notes::Eighth(Panels::None),
-                    Notes::Eighth(Panels::DownRight),
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::Eighth,
+                    },
                 ],
             },
             &[Token::Bytes(b"8B03")],
@@ -1024,11 +1144,23 @@ mod tests {
                         Difficulty::Basic,
                         4,
                         Steps {
-                            notes: vec![
-                                Notes::Eighth(Panels::Up),
-                                Notes::Eighth(Panels::None),
-                                Notes::Eighth(Panels::Down),
-                                Notes::Eighth(Panels::Right),
+                            steps: vec![
+                                Step {
+                                    panels: Panels::Up,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::None,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::Down,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::Right,
+                                    duration: Duration::Eighth,
+                                },
                             ],
                         },
                     ),
@@ -1036,11 +1168,23 @@ mod tests {
                         Difficulty::Another,
                         7,
                         Steps {
-                            notes: vec![
-                                Notes::Eighth(Panels::UpDown),
-                                Notes::Eighth(Panels::UpLeft),
-                                Notes::Eighth(Panels::None),
-                                Notes::Eighth(Panels::Up),
+                            steps: vec![
+                                Step {
+                                    panels: Panels::UpDown,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::UpLeft,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::None,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::Up,
+                                    duration: Duration::Eighth,
+                                },
                             ],
                         },
                     ),
@@ -1049,19 +1193,43 @@ mod tests {
                     Difficulty::Maniac,
                     9,
                     Steps {
-                        notes: vec![
-                            Notes::Eighth(Panels::Down),
-                            Notes::Eighth(Panels::Down),
-                            Notes::Eighth(Panels::Down),
-                            Notes::Eighth(Panels::Down),
+                        steps: vec![
+                            Step {
+                                panels: Panels::Down,
+                                duration: Duration::Eighth,
+                            },
+                            Step {
+                                panels: Panels::Down,
+                                duration: Duration::Eighth,
+                            },
+                            Step {
+                                panels: Panels::Down,
+                                duration: Duration::Eighth,
+                            },
+                            Step {
+                                panels: Panels::Down,
+                                duration: Duration::Eighth,
+                            },
                         ],
                     },
                     Steps {
-                        notes: vec![
-                            Notes::Eighth(Panels::Up),
-                            Notes::Eighth(Panels::Down),
-                            Notes::Eighth(Panels::LeftRight),
-                            Notes::Eighth(Panels::DownLeft),
+                        steps: vec![
+                            Step {
+                                panels: Panels::Up,
+                                duration: Duration::Eighth,
+                            },
+                            Step {
+                                panels: Panels::Down,
+                                duration: Duration::Eighth,
+                            },
+                            Step {
+                                panels: Panels::LeftRight,
+                                duration: Duration::Eighth,
+                            },
+                            Step {
+                                panels: Panels::DownLeft,
+                                duration: Duration::Eighth,
+                            },
                         ],
                     },
                 )],
@@ -1070,19 +1238,43 @@ mod tests {
                         Difficulty::Basic,
                         2,
                         Steps {
-                            notes: vec![
-                                Notes::Eighth(Panels::UpRight),
-                                Notes::Eighth(Panels::Down),
-                                Notes::Eighth(Panels::DownRight),
-                                Notes::Eighth(Panels::None),
+                            steps: vec![
+                                Step {
+                                    panels: Panels::UpRight,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::Down,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::DownRight,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::None,
+                                    duration: Duration::Eighth,
+                                },
                             ],
                         },
                         Steps {
-                            notes: vec![
-                                Notes::Eighth(Panels::Up),
-                                Notes::Eighth(Panels::Up),
-                                Notes::Eighth(Panels::UpDown),
-                                Notes::Eighth(Panels::Up),
+                            steps: vec![
+                                Step {
+                                    panels: Panels::Up,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::Up,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::UpDown,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::Up,
+                                    duration: Duration::Eighth,
+                                },
                             ],
                         },
                     ),
@@ -1090,19 +1282,43 @@ mod tests {
                         Difficulty::Another,
                         6,
                         Steps {
-                            notes: vec![
-                                Notes::Eighth(Panels::None),
-                                Notes::Eighth(Panels::None),
-                                Notes::Eighth(Panels::None),
-                                Notes::Eighth(Panels::None),
+                            steps: vec![
+                                Step {
+                                    panels: Panels::None,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::None,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::None,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::None,
+                                    duration: Duration::Eighth,
+                                },
                             ],
                         },
                         Steps {
-                            notes: vec![
-                                Notes::Eighth(Panels::Left),
-                                Notes::Eighth(Panels::Up),
-                                Notes::Eighth(Panels::Right),
-                                Notes::Eighth(Panels::Down),
+                            steps: vec![
+                                Step {
+                                    panels: Panels::Left,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::Up,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::Right,
+                                    duration: Duration::Eighth,
+                                },
+                                Step {
+                                    panels: Panels::Down,
+                                    duration: Duration::Eighth,
+                                },
                             ],
                         },
                     ),
@@ -1200,20 +1416,47 @@ mod tests {
     #[test]
     fn double_steps_into_generic_steps() {
         let steps_0 = Steps {
-            notes: vec![
-                Notes::Eighth(Panels::Up),
-                Notes::Sixteenth(Panels::Down),
-                Notes::Eighth(Panels::Right),
-                Notes::Sixteenth(Panels::Left),
+            steps: vec![
+                Step {
+                    panels: Panels::Up,
+                    duration: Duration::Eighth,
+                },
+                Step {
+                    panels: Panels::Down,
+                    duration: Duration::Sixteenth,
+                },
+                Step {
+                    panels: Panels::Right,
+                    duration: Duration::Eighth,
+                },
+                Step {
+                    panels: Panels::Left,
+                    duration: Duration::Sixteenth,
+                },
             ],
         };
         let steps_1 = Steps {
-            notes: vec![
-                Notes::Sixteenth(Panels::Up),
-                Notes::Sixteenth(Panels::Down),
-                Notes::Eighth(Panels::Right),
-                Notes::Sixteenth(Panels::UpDown),
-                Notes::Sixteenth(Panels::Left),
+            steps: vec![
+                Step {
+                    panels: Panels::Up,
+                    duration: Duration::Sixteenth,
+                },
+                Step {
+                    panels: Panels::Down,
+                    duration: Duration::Sixteenth,
+                },
+                Step {
+                    panels: Panels::Right,
+                    duration: Duration::Eighth,
+                },
+                Step {
+                    panels: Panels::UpDown,
+                    duration: Duration::Sixteenth,
+                },
+                Step {
+                    panels: Panels::Left,
+                    duration: Duration::Sixteenth,
+                },
             ],
         };
 
