@@ -304,7 +304,10 @@ impl<'de> Deserialize<'de> for Steps {
                         }
                         _ => {}
                     }
-                    steps.push(Step { panels: Panels::from_serialized_byte(byte)?, duration });
+                    steps.push(Step {
+                        panels: Panels::from_serialized_byte(byte)?,
+                        duration,
+                    });
                 }
                 Ok(Steps { steps })
             }
@@ -331,6 +334,26 @@ impl From<Steps> for song::Steps<4> {
 
 impl From<(Steps, Steps)> for song::Steps<8> {
     fn from(msd_steps: (Steps, Steps)) -> Self {
+        fn combine_steps(
+            left: [song::Panel; 4],
+            right: [song::Panel; 4],
+            duration: song::Duration,
+        ) -> song::Step<8> {
+            song::Step {
+                panels: {
+                    let mut whole = MaybeUninit::uninit();
+                    let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
+                    // SAFETY: The entirety of `whole` is initialized properly by these writes.
+                    unsafe {
+                        ptr.write(left);
+                        ptr.add(1).write(right);
+                        whole.assume_init()
+                    }
+                },
+                duration,
+            }
+        }
+
         let mut steps = Vec::new();
 
         // If both are at same point, pop them both and add.
@@ -348,70 +371,40 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                             // Find with duration to use.
                             match left_step.duration.cmp(&right_step.duration) {
                                 Ordering::Equal | Ordering::Less => {
-                                    steps.push(song::Step {
-                                        panels: {
-                                            let mut whole = MaybeUninit::uninit();
-                                            let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
-                                            unsafe {
-                                                ptr.write(left_step.panels.into());
-                                                ptr.add(1).write(right_step.panels.into());
-                                                whole.assume_init()
-                                            }
-                                        },
-                                        duration: left_step.duration.into(),
-                                    });
+                                    steps.push(combine_steps(
+                                        left_step.panels.into(),
+                                        right_step.panels.into(),
+                                        left_step.duration.into(),
+                                    ));
                                 }
                                 Ordering::Greater => {
-                                    steps.push(song::Step {
-                                        panels: {
-                                            let mut whole = MaybeUninit::uninit();
-                                            let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
-                                            unsafe {
-                                                ptr.write(left_step.panels.into());
-                                                ptr.add(1).write(right_step.panels.into());
-                                                whole.assume_init()
-                                            }
-                                        },
-                                        duration: right_step.duration.into(),
-                                    });
+                                    steps.push(combine_steps(
+                                        left_step.panels.into(),
+                                        right_step.panels.into(),
+                                        right_step.duration.into(),
+                                    ));
                                 }
                             }
-                            // Remember where the notes are currently aligned to.
-                            // Note that these values may be the opposite of what you intuitively
-                            // think, as they represent the denominators of their note durations.
-                            alignment = left_step.duration.as_isize() - right_step.duration.as_isize();
+                            alignment =
+                                left_step.duration.as_isize() - right_step.duration.as_isize();
                         }
                         (Some(left_step), None) => {
                             for &step in iter::once(left_step).chain(steps_0) {
-                                steps.push(song::Step {
-                                    panels: {
-                                        let mut whole = MaybeUninit::uninit();
-                                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
-                                        unsafe {
-                                            ptr.write(step.panels.into());
-                                            ptr.add(1).write(Panels::None.into());
-                                            whole.assume_init()
-                                        }
-                                    },
-                                    duration: step.duration.into(),
-                                });
+                                steps.push(combine_steps(
+                                    step.panels.into(),
+                                    Panels::None.into(),
+                                    step.duration.into(),
+                                ));
                             }
                             break;
                         }
                         (None, Some(right_step)) => {
                             for &step in iter::once(right_step).chain(steps_1) {
-                                steps.push(song::Step {
-                                    panels: {
-                                        let mut whole = MaybeUninit::uninit();
-                                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
-                                        unsafe {
-                                            ptr.write(Panels::None.into());
-                                            ptr.add(1).write(step.panels.into());
-                                            whole.assume_init()
-                                        }
-                                    },
-                                    duration: step.duration.into(),
-                                });
+                                steps.push(combine_steps(
+                                    step.panels.into(),
+                                    Panels::None.into(),
+                                    step.duration.into(),
+                                ));
                             }
                             break;
                         }
@@ -428,52 +421,30 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                             let duration_value = step.duration.as_isize();
                             if duration_value > alignment {
                                 // Take care not to skip past the other side's note.
-                                for step in step.into_steps_for_length(duration_value - alignment)
-                                {
-                                    steps.push(song::Step {
-                                        panels: {
-                                            let mut whole = MaybeUninit::uninit();
-                                            let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
-                                            unsafe {
-                                                ptr.write(Panels::None.into());
-                                                ptr.add(1).write(step.panels);
-                                                whole.assume_init()
-                                            }
-                                        },
-                                        duration: step.duration,
-                                    });
+                                for step in step.into_steps_for_length(duration_value - alignment) {
+                                    steps.push(combine_steps(
+                                        Panels::None.into(),
+                                        step.panels.into(),
+                                        step.duration.into(),
+                                    ));
                                 }
                             } else {
-                                steps.push(song::Step {
-                                    panels: {
-                                        let mut whole = MaybeUninit::uninit();
-                                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
-                                        unsafe {
-                                            ptr.write(Panels::None.into());
-                                            ptr.add(1).write(step.panels.into());
-                                            whole.assume_init()
-                                        }
-                                    },
-                                    duration: step.duration.into(),
-                                });
+                                steps.push(combine_steps(
+                                    Panels::None.into(),
+                                    step.panels.into(),
+                                    step.duration.into(),
+                                ));
                             }
 
                             alignment -= duration_value;
                         }
                         None => {
                             for &step in steps_0 {
-                                steps.push(song::Step {
-                                    panels: {
-                                        let mut whole = MaybeUninit::uninit();
-                                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
-                                        unsafe {
-                                            ptr.write(step.panels.into());
-                                            ptr.add(1).write(Panels::None.into());
-                                            whole.assume_init()
-                                        }
-                                    },
-                                    duration: step.duration.into(),
-                                });
+                                steps.push(combine_steps(
+                                    step.panels.into(),
+                                    Panels::None.into(),
+                                    step.duration.into(),
+                                ));
                             }
                             break;
                         }
@@ -487,52 +458,30 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                             let duration_value = step.duration.as_isize();
                             if duration_value > -alignment {
                                 // Take care not to skip past the other side's note.
-                                for step in step.into_steps_for_length(duration_value + alignment)
-                                {
-                                    steps.push(song::Step {
-                                        panels: {
-                                            let mut whole = MaybeUninit::uninit();
-                                            let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
-                                            unsafe {
-                                                ptr.write(step.panels);
-                                                ptr.add(1).write(Panels::None.into());
-                                                whole.assume_init()
-                                            }
-                                        },
-                                        duration: step.duration,
-                                    });
+                                for step in step.into_steps_for_length(duration_value + alignment) {
+                                    steps.push(combine_steps(
+                                        step.panels.into(),
+                                        Panels::None.into(),
+                                        step.duration.into(),
+                                    ));
                                 }
                             } else {
-                                steps.push(song::Step {
-                                    panels: {
-                                        let mut whole = MaybeUninit::uninit();
-                                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
-                                        unsafe {
-                                            ptr.write(step.panels.into());
-                                            ptr.add(1).write(Panels::None.into());
-                                            whole.assume_init()
-                                        }
-                                    },
-                                    duration: step.duration.into(),
-                                });
+                                steps.push(combine_steps(
+                                    step.panels.into(),
+                                    Panels::None.into(),
+                                    step.duration.into(),
+                                ));
                             }
 
                             alignment += duration_value;
                         }
                         None => {
                             for &step in steps_1 {
-                                steps.push(song::Step {
-                                    panels: {
-                                        let mut whole = MaybeUninit::uninit();
-                                        let ptr = whole.as_mut_ptr() as *mut [song::Panel; 4];
-                                        unsafe {
-                                            ptr.write(Panels::None.into());
-                                            ptr.add(1).write(step.panels.into());
-                                            whole.assume_init()
-                                        }
-                                    },
-                                    duration: step.duration.into(),
-                                });
+                                steps.push(combine_steps(
+                                    Panels::None.into(),
+                                    step.panels.into(),
+                                    step.duration.into(),
+                                ));
                             }
                             break;
                         }
@@ -1338,87 +1287,90 @@ mod tests {
             ],
         };
 
-        assert_eq!(song::Steps::from((steps_0, steps_1)), song::Steps {
-            steps: vec![
-                song::Step {
-                    panels: [
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::Step,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::Step,
-                        song::Panel::None,
-                    ],
-                    duration: song::Duration::Sixteenth,
-                },
-                song::Step {
-                    panels: [
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::Step,
-                        song::Panel::None,
-                        song::Panel::None,
-                    ],
-                    duration: song::Duration::Sixteenth,
-                },
-                song::Step {
-                    panels: [
-                        song::Panel::None,
-                        song::Panel::Step,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::Step,
-                    ],
-                    duration: song::Duration::Sixteenth,
-                },
-                song::Step {
-                    panels: [
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::Step,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                    ],
-                    duration: song::Duration::Sixteenth,
-                },
-                song::Step {
-                    panels: [
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::Step,
-                        song::Panel::Step,
-                        song::Panel::None,
-                    ],
-                    duration: song::Duration::Sixteenth,
-                },
-                song::Step {
-                    panels: [
-                        song::Panel::Step,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::Step,
-                        song::Panel::None,
-                        song::Panel::None,
-                        song::Panel::None,
-                    ],
-                    duration: song::Duration::Sixteenth,
-                },
-            ],
-        });
+        assert_eq!(
+            song::Steps::from((steps_0, steps_1)),
+            song::Steps {
+                steps: vec![
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::Step,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                ],
+            }
+        );
     }
 }
