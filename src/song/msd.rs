@@ -8,7 +8,7 @@ use std::{cmp::Ordering, fmt, iter, mem::MaybeUninit, str};
 
 /// All valid panel combinations, according to the MSD specification.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::song) enum Panels {
+enum Panels {
     None,
     Up,
     Right,
@@ -244,7 +244,7 @@ impl Step {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub(in crate::song) struct Steps {
+struct Steps {
     steps: Vec<Step>,
 }
 
@@ -496,7 +496,7 @@ impl From<(Steps, Steps)> for song::Steps<8> {
 
 /// All valid MSD difficulties.
 #[derive(Debug, Eq, PartialEq)]
-pub(in crate::song) enum Difficulty {
+enum Difficulty {
     /// Basic mode.
     Basic,
     /// Another mode.
@@ -605,18 +605,18 @@ impl From<Difficulty> for song::Difficulty {
 
 #[derive(Debug, PartialEq)]
 pub(in crate::song) struct Song {
-    pub(in crate::song) file: Option<String>,
-    pub(in crate::song) title: Option<String>,
-    pub(in crate::song) artist: Option<String>,
-    pub(in crate::song) msd: Option<String>,
-    pub(in crate::song) bpm: Option<f64>,
-    pub(in crate::song) gap: Option<i64>,
-    pub(in crate::song) back: Option<String>,
-    pub(in crate::song) bgm: Option<String>,
-    pub(in crate::song) select: Option<String>,
-    pub(in crate::song) single: Vec<(Difficulty, u8, Steps)>,
-    pub(in crate::song) double: Vec<(Difficulty, u8, Steps, Steps)>,
-    pub(in crate::song) couple: Vec<(Difficulty, u8, Steps, Steps)>,
+    file: Option<String>,
+    title: Option<String>,
+    artist: Option<String>,
+    msd: Option<String>,
+    bpm: Option<f64>,
+    gap: Option<i64>,
+    back: Option<String>,
+    bgm: Option<String>,
+    select: Option<String>,
+    single: Vec<(Difficulty, u8, Steps)>,
+    double: Vec<(Difficulty, u8, Steps, Steps)>,
+    couple: Vec<(Difficulty, u8, Steps, Steps)>,
 }
 
 impl Serialize for Song {
