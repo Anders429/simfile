@@ -401,32 +401,20 @@ impl<'de> Deserialize<'de> for Steps {
             {
                 // TODO: Make this capacity approximation more intelligent.
                 let mut steps = Vec::with_capacity(bytes.len());
-                // TODO: Separate out the duration into a separate enum, distinct from the step.
-                // Then this part will scale better with other granularities.
-                let mut sixteenth = false;
+                let mut duration = Duration::Eighth;
                 for &byte in bytes.iter().filter(|b| !b.is_ascii_whitespace()) {
                     match byte {
                         b'(' => {
-                            sixteenth = true;
+                            duration = Duration::Sixteenth;
                             continue;
                         }
                         b')' => {
-                            sixteenth = false;
+                            duration = Duration::Eighth;
                             continue;
                         }
                         _ => {}
                     }
-                    if sixteenth {
-                        steps.push(Step {
-                            panels: Panels::from_serialized_byte(byte)?,
-                            duration: Duration::Sixteenth,
-                        });
-                    } else {
-                        steps.push(Step {
-                            panels: Panels::from_serialized_byte(byte)?,
-                            duration: Duration::Eighth,
-                        });
-                    }
+                    steps.push(Step { panels: Panels::from_serialized_byte(byte)?, duration });
                 }
                 Ok(Steps { steps })
             }
