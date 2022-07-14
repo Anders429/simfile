@@ -1,10 +1,17 @@
 use crate::song;
 use serde::{
-    de::{EnumAccess, Error, MapAccess, Unexpected, VariantAccess, Visitor},
+    de,
+    de::{EnumAccess, MapAccess, Unexpected, VariantAccess, Visitor},
     ser::SerializeStruct,
     Deserialize, Deserializer, Serialize, Serializer,
 };
 use std::{cmp::Ordering, fmt, iter, mem::MaybeUninit, str};
+
+#[derive(Debug)]
+pub enum Error {
+    UnsupportedPanelCombination,
+    UnsupportedDifficulty,
+}
 
 /// All valid panel combinations, according to the MSD specification.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -41,7 +48,7 @@ impl Panels {
 
     fn from_serialized_byte<E>(byte: u8) -> Result<Self, E>
     where
-        E: Error,
+        E: de::Error,
     {
         match byte {
             b'0' => Ok(Self::None),
@@ -55,7 +62,7 @@ impl Panels {
             b'9' => Ok(Self::UpRight),
             b'A' => Ok(Self::UpDown),
             b'B' => Ok(Self::LeftRight),
-            _ => Err(Error::invalid_value(
+            _ => Err(de::Error::invalid_value(
                 Unexpected::Char(byte.into()),
                 &"'0', '1', '2', '3', '4', '6', '7', '8', '9', 'A', or 'B'",
             )),
@@ -131,6 +138,49 @@ impl From<Panels> for [song::Panel; 4] {
     }
 }
 
+impl TryFrom<[song::Panel; 4]> for Panels {
+    type Error = Error;
+
+    fn try_from(panels: [song::Panel; 4]) -> Result<Self, Self::Error> {
+        match panels {
+            [song::Panel::None, song::Panel::None, song::Panel::None, song::Panel::None] => {
+                Ok(Panels::None)
+            }
+            [song::Panel::Step, song::Panel::None, song::Panel::None, song::Panel::None] => {
+                Ok(Panels::Left)
+            }
+            [song::Panel::None, song::Panel::Step, song::Panel::None, song::Panel::None] => {
+                Ok(Panels::Down)
+            }
+            [song::Panel::None, song::Panel::None, song::Panel::Step, song::Panel::None] => {
+                Ok(Panels::Up)
+            }
+            [song::Panel::None, song::Panel::None, song::Panel::None, song::Panel::Step] => {
+                Ok(Panels::Right)
+            }
+            [song::Panel::Step, song::Panel::Step, song::Panel::None, song::Panel::None] => {
+                Ok(Panels::DownLeft)
+            }
+            [song::Panel::Step, song::Panel::None, song::Panel::Step, song::Panel::None] => {
+                Ok(Panels::UpLeft)
+            }
+            [song::Panel::Step, song::Panel::None, song::Panel::None, song::Panel::Step] => {
+                Ok(Panels::LeftRight)
+            }
+            [song::Panel::None, song::Panel::Step, song::Panel::Step, song::Panel::None] => {
+                Ok(Panels::UpDown)
+            }
+            [song::Panel::None, song::Panel::Step, song::Panel::None, song::Panel::Step] => {
+                Ok(Panels::DownRight)
+            }
+            [song::Panel::None, song::Panel::None, song::Panel::Step, song::Panel::Step] => {
+                Ok(Panels::UpRight)
+            }
+            _ => Err(Error::UnsupportedPanelCombination),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Duration {
     Eighth,
@@ -171,6 +221,17 @@ impl From<Duration> for song::Duration {
         match duration {
             Duration::Eighth => song::Duration::Eighth,
             Duration::Sixteenth => song::Duration::Sixteenth,
+        }
+    }
+}
+
+impl TryFrom<song::Duration> for Duration {
+    type Error = Error;
+
+    fn try_from(duration: song::Duration) -> Result<Self, Self::Error> {
+        match duration {
+            song::Duration::Eighth => Ok(Duration::Eighth),
+            song::Duration::Sixteenth => Ok(Duration::Sixteenth),
         }
     }
 }
@@ -267,6 +328,10 @@ impl Serialize for Steps {
             step.serialize_to_bytes(&mut result, previous);
             previous = Some(step.duration);
         }
+        match previous {
+            Some(Duration::Sixteenth) => result.push(b')'),
+            _ => {}
+        }
         serializer.serialize_bytes(&result)
     }
 }
@@ -287,7 +352,7 @@ impl<'de> Deserialize<'de> for Steps {
 
             fn visit_bytes<E>(self, bytes: &[u8]) -> Result<Self::Value, E>
             where
-                E: Error,
+                E: de::Error,
             {
                 // TODO: Make this capacity approximation more intelligent.
                 let mut steps = Vec::with_capacity(bytes.len());
@@ -329,6 +394,23 @@ impl From<Steps> for song::Steps<4> {
         }
 
         song::Steps { steps }
+    }
+}
+
+impl TryFrom<song::Steps<4>> for Steps {
+    type Error = Error;
+
+    fn try_from(song_steps: song::Steps<4>) -> Result<Self, Self::Error> {
+        let mut steps = Vec::new();
+
+        for step in song_steps.steps {
+            steps.push(Step {
+                panels: step.panels.try_into()?,
+                duration: step.duration.try_into()?,
+            });
+        }
+
+        Ok(Steps { steps })
     }
 }
 
@@ -494,6 +576,39 @@ impl From<(Steps, Steps)> for song::Steps<8> {
     }
 }
 
+impl TryFrom<song::Steps<8>> for (Steps, Steps) {
+    type Error = Error;
+
+    fn try_from(steps: song::Steps<8>) -> Result<Self, Self::Error> {
+        let mut left_steps = Vec::new();
+        let mut right_steps = Vec::new();
+
+        for step in steps.steps {
+            let mut left_panels = MaybeUninit::uninit();
+            let mut right_panels = MaybeUninit::uninit();
+            let panels_ptr = step.panels.as_ptr() as *const [song::Panel; 4];
+            // SAFETY: The reads done here are safe. The source array is 8 elements long, so it is
+            // safe to read as 2 arrays of 4 elements each.
+            unsafe {
+                left_panels = MaybeUninit::new(panels_ptr.read());
+                right_panels = MaybeUninit::new(panels_ptr.add(1).read());
+            }
+            left_steps.push(Step {
+                // SAFETY: `left_panels` is guaranteed to be completely filled from the above reads.
+                panels: unsafe { left_panels.assume_init() }.try_into()?,
+                duration: step.duration.try_into()?,
+            });
+            right_steps.push(Step {
+                // SAFETY: `right_panels` is guaranteed to be completely filled from the above reads.
+                panels: unsafe { right_panels.assume_init() }.try_into()?,
+                duration: step.duration.try_into()?,
+            });
+        }
+
+        Ok((Steps { steps: left_steps }, Steps { steps: right_steps }))
+    }
+}
+
 /// All valid MSD difficulties.
 #[derive(Debug, Eq, PartialEq)]
 enum Difficulty {
@@ -545,13 +660,13 @@ impl<'de> Deserialize<'de> for Difficulty {
 
                     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
                     where
-                        E: Error,
+                        E: de::Error,
                     {
                         match value {
                             "BASIC" => Ok(Variant::Basic),
                             "ANOTHER" => Ok(Variant::Another),
                             "MANIAC" => Ok(Variant::Maniac),
-                            _ => Err(Error::unknown_variant(value, VARIANTS)),
+                            _ => Err(de::Error::unknown_variant(value, VARIANTS)),
                         }
                     }
                 }
@@ -599,6 +714,19 @@ impl From<Difficulty> for song::Difficulty {
             Difficulty::Basic => song::Difficulty::Easy,
             Difficulty::Another => song::Difficulty::Medium,
             Difficulty::Maniac => song::Difficulty::Hard,
+        }
+    }
+}
+
+impl TryFrom<song::Difficulty> for Difficulty {
+    type Error = Error;
+
+    fn try_from(difficulty: song::Difficulty) -> Result<Self, Self::Error> {
+        match difficulty {
+            song::Difficulty::Easy => Ok(Self::Basic),
+            song::Difficulty::Medium => Ok(Self::Another),
+            song::Difficulty::Hard => Ok(Self::Maniac),
+            _ => Err(Error::UnsupportedDifficulty),
         }
     }
 }
@@ -677,7 +805,7 @@ impl<'de> Deserialize<'de> for Song {
 
                     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
                     where
-                        E: Error,
+                        E: de::Error,
                     {
                         match value {
                             "FILE" => Ok(Field::File),
@@ -692,7 +820,7 @@ impl<'de> Deserialize<'de> for Song {
                             "SINGLE" => Ok(Field::Single),
                             "DOUBLE" => Ok(Field::Double),
                             "COUPLE" => Ok(Field::Couple),
-                            _ => Err(Error::unknown_field(value, FIELDS)),
+                            _ => Err(de::Error::unknown_field(value, FIELDS)),
                         }
                     }
                 }
@@ -731,55 +859,55 @@ impl<'de> Deserialize<'de> for Song {
                     match key {
                         Field::File => {
                             if file.is_some() {
-                                return Err(Error::duplicate_field("FILE"));
+                                return Err(de::Error::duplicate_field("FILE"));
                             }
                             file = map_access.next_value()?;
                         }
                         Field::Title => {
                             if title.is_some() {
-                                return Err(Error::duplicate_field("TITLE"));
+                                return Err(de::Error::duplicate_field("TITLE"));
                             }
                             title = map_access.next_value()?;
                         }
                         Field::Artist => {
                             if artist.is_some() {
-                                return Err(Error::duplicate_field("ARTIST"));
+                                return Err(de::Error::duplicate_field("ARTIST"));
                             }
                             artist = map_access.next_value()?;
                         }
                         Field::Msd => {
                             if msd.is_some() {
-                                return Err(Error::duplicate_field("MSD"));
+                                return Err(de::Error::duplicate_field("MSD"));
                             }
                             msd = map_access.next_value()?;
                         }
                         Field::Bpm => {
                             if bpm.is_some() {
-                                return Err(Error::duplicate_field("BPM"));
+                                return Err(de::Error::duplicate_field("BPM"));
                             }
                             bpm = map_access.next_value()?;
                         }
                         Field::Gap => {
                             if gap.is_some() {
-                                return Err(Error::duplicate_field("GAP"));
+                                return Err(de::Error::duplicate_field("GAP"));
                             }
                             gap = map_access.next_value()?;
                         }
                         Field::Back => {
                             if back.is_some() {
-                                return Err(Error::duplicate_field("BACK"));
+                                return Err(de::Error::duplicate_field("BACK"));
                             }
                             back = map_access.next_value()?;
                         }
                         Field::Bgm => {
                             if bgm.is_some() {
-                                return Err(Error::duplicate_field("BGM"));
+                                return Err(de::Error::duplicate_field("BGM"));
                             }
                             bgm = map_access.next_value()?;
                         }
                         Field::Select => {
                             if select.is_some() {
-                                return Err(Error::duplicate_field("SELECT"));
+                                return Err(de::Error::duplicate_field("SELECT"));
                             }
                             select = map_access.next_value()?;
                         }
@@ -879,6 +1007,64 @@ impl From<Song> for song::Song {
 
             charts: charts,
         }
+    }
+}
+
+impl TryFrom<song::Song> for Song {
+    type Error = Error;
+
+    fn try_from(song: song::Song) -> Result<Self, Self::Error> {
+        let mut single = Vec::new();
+        let mut double = Vec::new();
+        let mut couple = Vec::new();
+
+        for chart in song.charts {
+            match chart.style {
+                song::Style::Single(steps) => {
+                    single.push((chart.difficulty.try_into()?, chart.meter, steps.try_into()?))
+                }
+                song::Style::Double(steps) => {
+                    let (left_steps, right_steps) = steps.try_into()?;
+                    double.push((
+                        chart.difficulty.try_into()?,
+                        chart.meter,
+                        left_steps,
+                        right_steps,
+                    ));
+                }
+                song::Style::Couple(steps) => {
+                    let (left_steps, right_steps) = steps.try_into()?;
+                    couple.push((
+                        chart.difficulty.try_into()?,
+                        chart.meter,
+                        left_steps,
+                        right_steps,
+                    ));
+                }
+            }
+        }
+
+        Ok(Song {
+            file: None,
+            // TODO: Make this remember the delimiter used when reading the file.
+            title: {
+                if let Some(subtitle) = song.subtitle {
+                    Some(format!("{}\t{}", song.title.unwrap_or_default(), subtitle))
+                } else {
+                    song.title
+                }
+            },
+            artist: song.artist,
+            msd: song.credit,
+            bpm: song.bpm,
+            gap: song.offset,
+            back: song.background_file,
+            select: song.music_preview_file,
+            bgm: song.music_file,
+            single,
+            double,
+            couple,
+        })
     }
 }
 

@@ -7,12 +7,20 @@
 mod msd;
 mod util;
 
-use std::{fs::File, io, io::BufReader, path::Path};
+use std::{
+    fs::File,
+    io,
+    io::{BufReader, BufWriter},
+    path::Path,
+};
 
 #[derive(Debug)]
 pub enum Error {
     Io(io::Error),
+    Serialization(::msd::ser::Error),
     Deserialization(::msd::de::Error),
+
+    ToMsd(msd::Error),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -21,7 +29,7 @@ pub enum Panel {
     Step,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Duration {
     Eighth,
     Sixteenth,
@@ -92,6 +100,17 @@ impl Song {
         .map_err(|error| Error::Deserialization(error))
         .map(|song| song.into())
     }
+
+    pub fn try_to_msd<P>(self, path: P) -> Result<(), Error>
+    where
+        P: AsRef<Path>,
+    {
+        ::msd::to_writer::<_, msd::Song>(
+            BufWriter::new(File::create(path).map_err(|error| Error::Io(error))?),
+            &self.try_into().map_err(|error| Error::ToMsd(error))?,
+        )
+        .map_err(|error| Error::Serialization(error))
+    }
 }
 
 #[cfg(test)]
@@ -100,6 +119,7 @@ mod tests {
 
     #[test]
     fn test() {
-        dbg!(Song::from_msd("test/data/msd/AM3P.msd"));
+        let song = Song::from_msd("test/data/msd/AM3P.msd").unwrap();
+        song.try_to_msd("test/data/msd/AM3P_COPY.msd").unwrap();
     }
 }
