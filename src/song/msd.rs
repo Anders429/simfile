@@ -185,13 +185,26 @@ impl TryFrom<[song::Panel; 4]> for Panels {
 enum Duration {
     Eighth,
     Sixteenth,
+    TwentyFourth,
 }
 
 impl Duration {
     fn serialization_capacity_requirement(&self, previous: Option<Self>) -> usize {
         match self {
-            Duration::Eighth => 1 + matches!(previous, Some(Duration::Sixteenth)) as usize,
-            Duration::Sixteenth => 1 + !matches!(previous, Some(Duration::Sixteenth)) as usize,
+            Duration::Eighth => {
+                1 + matches!(
+                    previous,
+                    Some(Duration::Sixteenth) | Some(Duration::TwentyFourth)
+                ) as usize
+            }
+            Duration::Sixteenth => {
+                1 + !matches!(previous, Some(Duration::Sixteenth)) as usize
+                    + matches!(previous, Some(Duration::TwentyFourth)) as usize
+            }
+            Duration::TwentyFourth => {
+                1 + !matches!(previous, Some(Duration::TwentyFourth)) as usize
+                    + matches!(previous, Some(Duration::Sixteenth)) as usize
+            }
         }
     }
 
@@ -200,6 +213,7 @@ impl Duration {
         match self {
             Self::Eighth => 24,
             Self::Sixteenth => 12,
+            Self::TwentyFourth => 8,
         }
     }
 }
@@ -221,6 +235,7 @@ impl From<Duration> for song::Duration {
         match duration {
             Duration::Eighth => song::Duration::Eighth,
             Duration::Sixteenth => song::Duration::Sixteenth,
+            Duration::TwentyFourth => song::Duration::TwentyFourth,
         }
     }
 }
@@ -232,6 +247,7 @@ impl TryFrom<song::Duration> for Duration {
         match duration {
             song::Duration::Eighth => Ok(Duration::Eighth),
             song::Duration::Sixteenth => Ok(Duration::Sixteenth),
+            song::Duration::TwentyFourth => Ok(Duration::TwentyFourth),
         }
     }
 }
@@ -248,12 +264,26 @@ impl Step {
             Duration::Eighth => {
                 if matches!(previous, Some(Duration::Sixteenth)) {
                     bytes.push(b')');
+                } else if matches!(previous, Some(Duration::TwentyFourth)) {
+                    bytes.push(b']');
                 }
                 bytes.push(self.panels.as_serialized_byte());
             }
             Duration::Sixteenth => {
+                if matches!(previous, Some(Duration::TwentyFourth)) {
+                    bytes.push(b']');
+                }
                 if !matches!(previous, Some(Duration::Sixteenth)) {
                     bytes.push(b'(');
+                }
+                bytes.push(self.panels.as_serialized_byte());
+            }
+            Duration::TwentyFourth => {
+                if matches!(previous, Some(Duration::Sixteenth)) {
+                    bytes.push(b')');
+                }
+                if !matches!(previous, Some(Duration::TwentyFourth)) {
+                    bytes.push(b'[');
                 }
                 bytes.push(self.panels.as_serialized_byte());
             }
@@ -276,6 +306,11 @@ impl Step {
                 duration: song::Duration::Sixteenth,
             });
             length -= 12;
+        } else if 8 <= length {
+            steps.push(song::Step {
+                panels: self.panels.into(),
+                duration: song::Duration::TwentyFourth,
+            })
         } else {
             // Shouldn't ever get here.
             unreachable!()
@@ -295,6 +330,11 @@ impl Step {
                     duration: song::Duration::Sixteenth,
                 });
                 length -= 12;
+            } else if 8 <= length {
+                steps.push(song::Step {
+                    panels: Panels::None.into(),
+                    duration: song::Duration::TwentyFourth,
+                })
             } else {
                 // Shouldn't ever get here.
                 unreachable!()
@@ -888,6 +928,7 @@ impl<'de> Deserialize<'de> for Song {
                             if remixer.is_some() {
                                 return Err(de::Error::duplicate_field("REMIXER"));
                             }
+                            remixer = map_access.next_value()?;
                         }
                         Field::Bpm => {
                             if bpm.is_some() {
@@ -956,8 +997,8 @@ impl<'de> Deserialize<'de> for Song {
         }
 
         const FIELDS: &[&str] = &[
-            "FILE", "TITLE", "ARTIST", "MSD", "REMIXER", "BPM", "GAP", "BACK", "BGM", "SELECT", "SINGLE",
-            "DOUBLE", "COUPLE",
+            "FILE", "TITLE", "ARTIST", "MSD", "REMIXER", "BPM", "GAP", "BACK", "BGM", "SELECT",
+            "SINGLE", "DOUBLE", "COUPLE",
         ];
         deserializer.deserialize_struct("Song", FIELDS, SongVisitor)
     }

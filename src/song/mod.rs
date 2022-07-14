@@ -33,6 +33,7 @@ pub enum Panel {
 pub enum Duration {
     Eighth,
     Sixteenth,
+    TwentyFourth,
 }
 
 #[derive(Debug, Eq, PartialEq)]
