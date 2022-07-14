@@ -779,6 +779,7 @@ impl<'de> Deserialize<'de> for Song {
             Title,
             Artist,
             Msd,
+            Remixer,
             Bpm,
             Gap,
             Back,
@@ -800,7 +801,7 @@ impl<'de> Deserialize<'de> for Song {
                     type Value = Field;
 
                     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                        formatter.write_str("`FILE`, `TITLE`, `ARTIST`, `BPM`, `GAP`, `BACK`, `BGM`, `SELECT`, `SINGLE`, `DOUBLE`, or `COUPLE`")
+                        formatter.write_str("`FILE`, `TITLE`, `ARTIST`, `MSD`, `REMIXER`, `BPM`, `GAP`, `BACK`, `BGM`, `SELECT`, `SINGLE`, `DOUBLE`, or `COUPLE`")
                     }
 
                     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
@@ -812,6 +813,7 @@ impl<'de> Deserialize<'de> for Song {
                             "TITLE" => Ok(Field::Title),
                             "ARTIST" => Ok(Field::Artist),
                             "MSD" => Ok(Field::Msd),
+                            "REMIXER" => Ok(Field::Remixer),
                             "BPM" => Ok(Field::Bpm),
                             "GAP" => Ok(Field::Gap),
                             "BACK" => Ok(Field::Back),
@@ -846,6 +848,7 @@ impl<'de> Deserialize<'de> for Song {
                 let mut title = None;
                 let mut artist = None;
                 let mut msd = None;
+                let mut remixer = None;
                 let mut bpm = None;
                 let mut gap = None;
                 let mut back = None;
@@ -880,6 +883,11 @@ impl<'de> Deserialize<'de> for Song {
                                 return Err(de::Error::duplicate_field("MSD"));
                             }
                             msd = map_access.next_value()?;
+                        }
+                        Field::Remixer => {
+                            if remixer.is_some() {
+                                return Err(de::Error::duplicate_field("REMIXER"));
+                            }
                         }
                         Field::Bpm => {
                             if bpm.is_some() {
@@ -931,7 +939,10 @@ impl<'de> Deserialize<'de> for Song {
                     file,
                     title,
                     artist,
-                    msd,
+                    // Note that both `#MSD` and `#REMIXER` appear to have been used interchangably
+                    // to store the name of the step artist. We prefer `#MSD` over `#REMIXER`,
+                    // since it seems to be more common.
+                    msd: msd.or(remixer),
                     bpm,
                     gap,
                     back,
@@ -945,7 +956,7 @@ impl<'de> Deserialize<'de> for Song {
         }
 
         const FIELDS: &[&str] = &[
-            "FILE", "TITLE", "ARTIST", "MSD", "BPM", "GAP", "BACK", "BGM", "SELECT", "SINGLE",
+            "FILE", "TITLE", "ARTIST", "MSD", "REMIXER", "BPM", "GAP", "BACK", "BGM", "SELECT", "SINGLE",
             "DOUBLE", "COUPLE",
         ];
         deserializer.deserialize_struct("Song", FIELDS, SongVisitor)
