@@ -94,11 +94,9 @@ impl Song {
     where
         P: AsRef<Path>,
     {
-        ::msd::from_reader::<_, msd::Song>(BufReader::new(
-            File::open(path).map_err(|error| Error::Io(error))?,
-        ))
-        .map_err(|error| Error::Deserialization(error))
-        .map(|song| song.into())
+        ::msd::from_reader::<_, msd::Song>(BufReader::new(File::open(path).map_err(Error::Io)?))
+            .map_err(Error::Deserialization)
+            .map(|song| song.into())
     }
 
     pub fn try_to_msd<P>(self, path: P) -> Result<(), Error>
@@ -106,10 +104,10 @@ impl Song {
         P: AsRef<Path>,
     {
         ::msd::to_writer::<_, msd::Song>(
-            BufWriter::new(File::create(path).map_err(|error| Error::Io(error))?),
-            &self.try_into().map_err(|error| Error::ToMsd(error))?,
+            BufWriter::new(File::create(path).map_err(Error::Io)?),
+            &self.try_into().map_err(Error::ToMsd)?,
         )
-        .map_err(|error| Error::Serialization(error))
+        .map_err(Error::Serialization)
     }
 }
 

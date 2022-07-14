@@ -506,8 +506,8 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                 for step in step.into_steps_for_length(duration_value - alignment) {
                                     steps.push(combine_steps(
                                         Panels::None.into(),
-                                        step.panels.into(),
-                                        step.duration.into(),
+                                        step.panels,
+                                        step.duration,
                                     ));
                                 }
                             } else {
@@ -542,9 +542,9 @@ impl From<(Steps, Steps)> for song::Steps<8> {
                                 // Take care not to skip past the other side's note.
                                 for step in step.into_steps_for_length(duration_value + alignment) {
                                     steps.push(combine_steps(
-                                        step.panels.into(),
+                                        step.panels,
                                         Panels::None.into(),
-                                        step.duration.into(),
+                                        step.duration,
                                     ));
                                 }
                             } else {
@@ -584,8 +584,8 @@ impl TryFrom<song::Steps<8>> for (Steps, Steps) {
         let mut right_steps = Vec::new();
 
         for step in steps.steps {
-            let mut left_panels = MaybeUninit::uninit();
-            let mut right_panels = MaybeUninit::uninit();
+            let left_panels;
+            let right_panels;
             let panels_ptr = step.panels.as_ptr() as *const [song::Panel; 4];
             // SAFETY: The reads done here are safe. The source array is 8 elements long, so it is
             // safe to read as 2 arrays of 4 elements each.
@@ -702,7 +702,7 @@ impl<'de> Deserialize<'de> for Difficulty {
             }
         }
 
-        const VARIANTS: &'static [&'static str] = &["BASIC", "ANOTHER", "MANIAC"];
+        const VARIANTS: &[&str] = &["BASIC", "ANOTHER", "MANIAC"];
 
         deserializer.deserialize_enum("Difficulty", VARIANTS, DifficultyVisitor)
     }
@@ -944,7 +944,7 @@ impl<'de> Deserialize<'de> for Song {
             }
         }
 
-        const FIELDS: &'static [&'static str] = &[
+        const FIELDS: &[&str] = &[
             "FILE", "TITLE", "ARTIST", "MSD", "BPM", "GAP", "BACK", "BGM", "SELECT", "SINGLE",
             "DOUBLE", "COUPLE",
         ];
@@ -993,8 +993,8 @@ impl From<Song> for song::Song {
         }
 
         song::Song {
-            title: title,
-            subtitle: subtitle,
+            title,
+            subtitle,
             artist: song.artist,
             credit: song.msd,
 
@@ -1005,7 +1005,7 @@ impl From<Song> for song::Song {
             music_preview_file: song.select,
             music_file: song.bgm,
 
-            charts: charts,
+            charts,
         }
     }
 }
