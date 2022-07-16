@@ -15,6 +15,7 @@ use std::{
 };
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Error {
     Io(io::Error),
     Serialization(::msd::ser::Error),
@@ -92,7 +93,10 @@ pub struct Song {
 }
 
 impl Song {
-    pub fn from_msd<P>(path: P) -> Result<Self, Error>
+    /// Read a `.msd` formatted song simfile.
+    /// 
+    /// Specifically, this function will read the simfile using the `MSD 2.0` specification.
+    pub fn read_msd<P>(path: P) -> Result<Self, Error>
     where
         P: AsRef<Path>,
     {
@@ -101,7 +105,12 @@ impl Song {
             .map(|song| song.into())
     }
 
-    pub fn try_to_msd<P>(self, path: P) -> Result<(), Error>
+    /// Write this song simfile to a `.msd` formatted file.
+    /// 
+    /// This method will fail if the song simfile contains elements that cannot be properly encoded
+    /// in a `.msd` file. Specifically, this method will attempt to encode the simfile using the
+    /// `MSD 2.0` specification.
+    pub fn write_msd<P>(self, path: P) -> Result<(), Error>
     where
         P: AsRef<Path>,
     {
@@ -119,7 +128,7 @@ mod tests {
 
     #[test]
     fn test() {
-        let song = Song::from_msd("test/data/msd/AM3P.msd").unwrap();
-        song.try_to_msd("test/data/msd/AM3P_COPY.msd").unwrap();
+        let song = Song::read_msd("test/data/msd/AM3P.msd").unwrap();
+        song.write_msd("test/data/msd/AM3P_COPY.msd").unwrap();
     }
 }
