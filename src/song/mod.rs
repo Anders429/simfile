@@ -94,7 +94,7 @@ pub struct Song {
 
 impl Song {
     /// Read a `.msd` formatted song simfile.
-    /// 
+    ///
     /// Specifically, this function will read the simfile using the `MSD 2.0` specification.
     pub fn read_msd<P>(path: P) -> Result<Self, Error>
     where
@@ -106,7 +106,7 @@ impl Song {
     }
 
     /// Write this song simfile to a `.msd` formatted file.
-    /// 
+    ///
     /// This method will fail if the song simfile contains elements that cannot be properly encoded
     /// in a `.msd` file. Specifically, this method will attempt to encode the simfile using the
     /// `MSD 2.0` specification.
