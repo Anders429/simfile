@@ -92,6 +92,16 @@ pub(in crate::song) fn split_title_and_subtitle(mut title: String) -> (String, O
     }
 }
 
+pub(in crate::song) fn combine_title_and_subtitle(title: String, subtitle: String) -> String {
+    // TODO: More sophisticated combining. This needs to know exactly how the title was split
+    // originally, and whether or not the combining will be split again on the same character.
+    if subtitle.starts_with(['-', '~', '(', '[']) {
+        format!("{} {}", title, subtitle)
+    } else {
+        format!("{}\t{}", title, subtitle)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,6 +186,46 @@ mod tests {
         assert_eq!(
             split_title_and_subtitle("foo [bar (baz".to_owned()),
             ("foo [bar".to_owned(), Some("(baz".to_owned()))
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_tab() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "bar".to_owned()),
+            "foo\tbar".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_dash() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "-bar".to_owned()),
+            "foo -bar".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_tilde() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "~bar".to_owned()),
+            "foo ~bar".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_parenthesis() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "(bar".to_owned()),
+            "foo (bar".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_bracket() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "[bar".to_owned()),
+            "foo [bar".to_owned()
         );
     }
 }
