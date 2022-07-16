@@ -64,7 +64,7 @@ impl Panels {
             b'B' => Ok(Self::LeftRight),
             _ => Err(de::Error::invalid_value(
                 Unexpected::Char(byte.into()),
-                &"'0', '1', '2', '3', '4', '6', '7', '8', '9', 'A', or 'B'",
+                &"`0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
             )),
         }
     }
@@ -195,19 +195,31 @@ impl Duration {
             Duration::Eighth => {
                 1 + matches!(
                     previous,
-                    Some(Duration::Sixteenth) | Some(Duration::TwentyFourth) | Some(Duration::SixtyFourth)
+                    Some(Duration::Sixteenth)
+                        | Some(Duration::TwentyFourth)
+                        | Some(Duration::SixtyFourth)
                 ) as usize
             }
             Duration::Sixteenth => {
                 1 + !matches!(previous, Some(Duration::Sixteenth)) as usize
-                    + matches!(previous, Some(Duration::TwentyFourth) | Some(Duration::SixtyFourth)) as usize
+                    + matches!(
+                        previous,
+                        Some(Duration::TwentyFourth) | Some(Duration::SixtyFourth)
+                    ) as usize
             }
             Duration::TwentyFourth => {
                 1 + !matches!(previous, Some(Duration::TwentyFourth)) as usize
-                    + matches!(previous, Some(Duration::Sixteenth) | Some(Duration::SixtyFourth)) as usize
+                    + matches!(
+                        previous,
+                        Some(Duration::Sixteenth) | Some(Duration::SixtyFourth)
+                    ) as usize
             }
             Duration::SixtyFourth => {
-                1 + !matches!(previous, Some(Duration::SixtyFourth)) as usize + matches!(previous, Some(Duration::Sixteenth) | Some(Duration::TwentyFourth)) as usize
+                1 + !matches!(previous, Some(Duration::SixtyFourth)) as usize
+                    + matches!(
+                        previous,
+                        Some(Duration::Sixteenth) | Some(Duration::TwentyFourth)
+                    ) as usize
             }
         }
     }
@@ -281,8 +293,7 @@ impl Step {
             Duration::Sixteenth => {
                 if matches!(previous, Some(Duration::TwentyFourth)) {
                     bytes.push(b']');
-                }
-                else if matches!(previous, Some(Duration::SixtyFourth)) {
+                } else if matches!(previous, Some(Duration::SixtyFourth)) {
                     bytes.push(b'}');
                 }
                 if !matches!(previous, Some(Duration::Sixteenth)) {
@@ -437,19 +448,77 @@ impl<'de> Deserialize<'de> for Steps {
                 for &byte in bytes.iter().filter(|b| !b.is_ascii_whitespace()) {
                     match byte {
                         b'(' => {
+                            if !matches!(duration, Duration::Eighth) {
+                                return Err(de::Error::invalid_value(
+                                    Unexpected::Other("incorrectly nested `(`"),
+                                    &"`0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+                                ));
+                            }
                             duration = Duration::Sixteenth;
                             continue;
                         }
                         b'[' => {
+                            if !matches!(duration, Duration::Eighth) {
+                                return Err(de::Error::invalid_value(
+                                    Unexpected::Other("incorrectly nested `[`"),
+                                    &"`0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+                                ));
+                            }
                             duration = Duration::TwentyFourth;
                             continue;
                         }
                         b'{' => {
+                            if !matches!(duration, Duration::Eighth) {
+                                return Err(de::Error::invalid_value(
+                                    Unexpected::Other("incorrectly nested `{`"),
+                                    &"`0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+                                ));
+                            }
                             duration = Duration::SixtyFourth;
                             continue;
                         }
-                        // TODO: Check whether this correctly matches the current duration state.
-                        b')' | b']' | b'}' => {
+                        b')' => {
+                            if !matches!(duration, Duration::Sixteenth) {
+                                return Err(de::Error::invalid_value(
+                                    Unexpected::Other("mismatched `)`"),
+                                    &match duration {
+                                        Duration::Eighth => "`0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+                                        Duration::TwentyFourth => "`]`",
+                                        Duration::SixtyFourth => "`}`",
+                                        _ => unreachable!(),
+                                    },
+                                ));
+                            }
+                            duration = Duration::Eighth;
+                            continue;
+                        }
+                        b']' => {
+                            if !matches!(duration, Duration::TwentyFourth) {
+                                return Err(de::Error::invalid_value(
+                                    Unexpected::Other("mismatched `)`"),
+                                    &match duration {
+                                        Duration::Eighth => "`0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+                                        Duration::Sixteenth => "`)`",
+                                        Duration::SixtyFourth => "`}`",
+                                        _ => unreachable!(),
+                                    },
+                                ));
+                            }
+                            duration = Duration::Eighth;
+                            continue;
+                        }
+                        b'}' => {
+                            if !matches!(duration, Duration::SixtyFourth) {
+                                return Err(de::Error::invalid_value(
+                                    Unexpected::Other("mismatched `)`"),
+                                    &match duration {
+                                        Duration::Eighth => "`0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+                                        Duration::Sixteenth => "`)`",
+                                        Duration::TwentyFourth => "`]`",
+                                        _ => unreachable!(),
+                                    },
+                                ));
+                            }
                             duration = Duration::Eighth;
                             continue;
                         }
