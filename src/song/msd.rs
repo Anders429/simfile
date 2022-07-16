@@ -326,7 +326,7 @@ impl Step {
         }
     }
 
-    fn into_steps_for_length(&self, mut length: isize) -> Vec<song::Step<4>> {
+    fn into_steps_for_length(self, mut length: isize) -> Vec<song::Step<4>> {
         let mut steps = Vec::new();
 
         // Convert step.
