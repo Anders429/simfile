@@ -186,6 +186,7 @@ enum Duration {
     Eighth,
     Sixteenth,
     TwentyFourth,
+    SixtyFourth,
 }
 
 impl Duration {
@@ -194,16 +195,19 @@ impl Duration {
             Duration::Eighth => {
                 1 + matches!(
                     previous,
-                    Some(Duration::Sixteenth) | Some(Duration::TwentyFourth)
+                    Some(Duration::Sixteenth) | Some(Duration::TwentyFourth) | Some(Duration::SixtyFourth)
                 ) as usize
             }
             Duration::Sixteenth => {
                 1 + !matches!(previous, Some(Duration::Sixteenth)) as usize
-                    + matches!(previous, Some(Duration::TwentyFourth)) as usize
+                    + matches!(previous, Some(Duration::TwentyFourth) | Some(Duration::SixtyFourth)) as usize
             }
             Duration::TwentyFourth => {
                 1 + !matches!(previous, Some(Duration::TwentyFourth)) as usize
-                    + matches!(previous, Some(Duration::Sixteenth)) as usize
+                    + matches!(previous, Some(Duration::Sixteenth) | Some(Duration::SixtyFourth)) as usize
+            }
+            Duration::SixtyFourth => {
+                1 + !matches!(previous, Some(Duration::SixtyFourth)) as usize + matches!(previous, Some(Duration::Sixteenth) | Some(Duration::TwentyFourth)) as usize
             }
         }
     }
@@ -214,6 +218,7 @@ impl Duration {
             Self::Eighth => 24,
             Self::Sixteenth => 12,
             Self::TwentyFourth => 8,
+            Self::SixtyFourth => 3,
         }
     }
 }
@@ -236,6 +241,7 @@ impl From<Duration> for song::Duration {
             Duration::Eighth => song::Duration::Eighth,
             Duration::Sixteenth => song::Duration::Sixteenth,
             Duration::TwentyFourth => song::Duration::TwentyFourth,
+            Duration::SixtyFourth => song::Duration::SixtyFourth,
         }
     }
 }
@@ -248,6 +254,7 @@ impl TryFrom<song::Duration> for Duration {
             song::Duration::Eighth => Ok(Duration::Eighth),
             song::Duration::Sixteenth => Ok(Duration::Sixteenth),
             song::Duration::TwentyFourth => Ok(Duration::TwentyFourth),
+            song::Duration::SixtyFourth => Ok(Duration::SixtyFourth),
         }
     }
 }
@@ -266,12 +273,17 @@ impl Step {
                     bytes.push(b')');
                 } else if matches!(previous, Some(Duration::TwentyFourth)) {
                     bytes.push(b']');
+                } else if matches!(previous, Some(Duration::SixtyFourth)) {
+                    bytes.push(b'}');
                 }
                 bytes.push(self.panels.as_serialized_byte());
             }
             Duration::Sixteenth => {
                 if matches!(previous, Some(Duration::TwentyFourth)) {
                     bytes.push(b']');
+                }
+                else if matches!(previous, Some(Duration::SixtyFourth)) {
+                    bytes.push(b'}');
                 }
                 if !matches!(previous, Some(Duration::Sixteenth)) {
                     bytes.push(b'(');
@@ -281,9 +293,22 @@ impl Step {
             Duration::TwentyFourth => {
                 if matches!(previous, Some(Duration::Sixteenth)) {
                     bytes.push(b')');
+                } else if matches!(previous, Some(Duration::SixtyFourth)) {
+                    bytes.push(b'}');
                 }
                 if !matches!(previous, Some(Duration::TwentyFourth)) {
                     bytes.push(b'[');
+                }
+                bytes.push(self.panels.as_serialized_byte());
+            }
+            Duration::SixtyFourth => {
+                if matches!(previous, Some(Duration::Sixteenth)) {
+                    bytes.push(b')');
+                } else if matches!(previous, Some(Duration::TwentyFourth)) {
+                    bytes.push(b']');
+                }
+                if !matches!(previous, Some(Duration::SixtyFourth)) {
+                    bytes.push(b'{');
                 }
                 bytes.push(self.panels.as_serialized_byte());
             }
@@ -311,6 +336,11 @@ impl Step {
                 panels: self.panels.into(),
                 duration: song::Duration::TwentyFourth,
             })
+        } else if 3 <= length {
+            steps.push(song::Step {
+                panels: self.panels.into(),
+                duration: song::Duration::SixtyFourth,
+            })
         } else {
             // Shouldn't ever get here.
             unreachable!()
@@ -334,6 +364,11 @@ impl Step {
                 steps.push(song::Step {
                     panels: Panels::None.into(),
                     duration: song::Duration::TwentyFourth,
+                })
+            } else if 3 <= length {
+                steps.push(song::Step {
+                    panels: Panels::None.into(),
+                    duration: song::Duration::SixtyFourth,
                 })
             } else {
                 // Shouldn't ever get here.
@@ -370,6 +405,8 @@ impl Serialize for Steps {
         }
         match previous {
             Some(Duration::Sixteenth) => result.push(b')'),
+            Some(Duration::TwentyFourth) => result.push(b']'),
+            Some(Duration::SixtyFourth) => result.push(b'}'),
             _ => {}
         }
         serializer.serialize_bytes(&result)
@@ -403,7 +440,16 @@ impl<'de> Deserialize<'de> for Steps {
                             duration = Duration::Sixteenth;
                             continue;
                         }
-                        b')' => {
+                        b'[' => {
+                            duration = Duration::TwentyFourth;
+                            continue;
+                        }
+                        b'{' => {
+                            duration = Duration::SixtyFourth;
+                            continue;
+                        }
+                        // TODO: Check whether this correctly matches the current duration state.
+                        b')' | b']' | b'}' => {
                             duration = Duration::Eighth;
                             continue;
                         }

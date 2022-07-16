@@ -34,6 +34,7 @@ pub enum Duration {
     Eighth,
     Sixteenth,
     TwentyFourth,
+    SixtyFourth,
 }
 
 #[derive(Debug, Eq, PartialEq)]
