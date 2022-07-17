@@ -1,5 +1,5 @@
-use crate::song;
 use super::util;
+use crate::song;
 use serde::{
     de,
     de::{EnumAccess, MapAccess, Unexpected, VariantAccess, Visitor},
@@ -1216,7 +1216,10 @@ impl TryFrom<song::Song> for Song {
             file: None,
             title: {
                 if let Some(subtitle) = song.subtitle {
-                    Some(util::combine_title_and_subtitle(song.title.unwrap_or_default(), subtitle))
+                    Some(util::combine_title_and_subtitle(
+                        song.title.unwrap_or_default(),
+                        subtitle,
+                    ))
                 } else {
                     song.title
                 }

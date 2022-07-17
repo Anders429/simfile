@@ -93,12 +93,104 @@ pub(in crate::song) fn split_title_and_subtitle(mut title: String) -> (String, O
 }
 
 pub(in crate::song) fn combine_title_and_subtitle(title: String, subtitle: String) -> String {
-    // TODO: More sophisticated combining. This needs to know exactly how the title was split
-    // originally, and whether or not the combining will be split again on the same character.
-    if subtitle.starts_with(['-', '~', '(', '[']) {
-        format!("{} {}", title, subtitle)
-    } else {
-        format!("{}\t{}", title, subtitle)
+    macro_rules! find_prefix {
+        ($chars:ident, $pattern:pat) => {{
+            let mut space = false;
+            loop {
+                if let Some(c) = $chars.next() {
+                    match c {
+                        ' ' => {
+                            space = true;
+                        }
+                        $pattern => {
+                            if space {
+                                break true;
+                            }
+                            space = false;
+                        }
+                        _ => {
+                            space = false;
+                        }
+                    }
+                } else {
+                    break false;
+                }
+            }
+        }};
+    }
+
+    macro_rules! find_prefix_or_tab {
+        ($chars:ident, $pattern:pat) => {{
+            let mut space = false;
+            loop {
+                if let Some(c) = $chars.next() {
+                    match c {
+                        ' ' => {
+                            space = true;
+                        }
+                        '\t' => {
+                            break true;
+                        }
+                        $pattern => {
+                            if space {
+                                break true;
+                            }
+                            space = false;
+                        }
+                        _ => {
+                            space = false;
+                        }
+                    }
+                } else {
+                    break false;
+                }
+            }
+        }};
+    }
+
+    // This complicated tree is meant to perform the inverse of the `split_title_and_subtitle()`
+    // function above. It ensures, to the best it can, that the output here will again be split
+    // into the same title and subtitle pair.
+    //
+    // Note that this logic doesn't both about other tab characters being before the split. It only
+    // checks for tabs after the split (in the subtitle). If there are tabs in the title, then it
+    // just isn't possible to combine in a reversible way.
+    let mut title_chars = title.chars();
+    let mut subtitle_chars = subtitle.chars();
+    match subtitle_chars.next() {
+        Some('-') => {
+            if find_prefix!(title_chars, '-') || subtitle.contains('\t') {
+                format!("{}\t{}", title, subtitle)
+            } else {
+                format!("{} {}", title, subtitle)
+            }
+        }
+        Some('~') => {
+            if find_prefix!(title_chars, '-' | '~') || find_prefix_or_tab!(subtitle_chars, '-') {
+                format!("{}\t{}", title, subtitle)
+            } else {
+                format!("{} {}", title, subtitle)
+            }
+        }
+        Some('(') => {
+            if find_prefix!(title_chars, '-' | '~' | '(')
+                || find_prefix_or_tab!(subtitle_chars, '-' | '~')
+            {
+                format!("{}\t{}", title, subtitle)
+            } else {
+                format!("{} {}", title, subtitle)
+            }
+        }
+        Some('[') => {
+            if find_prefix!(title_chars, '-' | '~' | '(' | '[')
+                || find_prefix_or_tab!(subtitle_chars, '-' | '~' | '(')
+            {
+                format!("{}\t{}", title, subtitle)
+            } else {
+                format!("{} {}", title, subtitle)
+            }
+        }
+        _ => format!("{}\t{}", title, subtitle),
     }
 }
 
