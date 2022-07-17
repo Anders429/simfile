@@ -94,7 +94,7 @@ pub(in crate::song) fn split_title_and_subtitle(mut title: String) -> (String, O
 
 pub(in crate::song) fn combine_title_and_subtitle(title: String, subtitle: String) -> String {
     macro_rules! find_prefix {
-        ($chars:ident, $pattern:pat) => {{
+        ($chars:ident, $pattern:pat $(, $tab:literal)?) => {{
             let mut space = false;
             loop {
                 if let Some(c) = $chars.next() {
@@ -102,35 +102,11 @@ pub(in crate::song) fn combine_title_and_subtitle(title: String, subtitle: Strin
                         ' ' => {
                             space = true;
                         }
-                        $pattern => {
-                            if space {
+                        $(
+                            $tab => {
                                 break true;
                             }
-                            space = false;
-                        }
-                        _ => {
-                            space = false;
-                        }
-                    }
-                } else {
-                    break false;
-                }
-            }
-        }};
-    }
-
-    macro_rules! find_prefix_or_tab {
-        ($chars:ident, $pattern:pat) => {{
-            let mut space = false;
-            loop {
-                if let Some(c) = $chars.next() {
-                    match c {
-                        ' ' => {
-                            space = true;
-                        }
-                        '\t' => {
-                            break true;
-                        }
+                        )?
                         $pattern => {
                             if space {
                                 break true;
@@ -160,15 +136,15 @@ pub(in crate::song) fn combine_title_and_subtitle(title: String, subtitle: Strin
     if match subtitle_chars.next() {
         Some('-') => find_prefix!(title_chars, '-') || subtitle.contains('\t'),
         Some('~') => {
-            find_prefix!(title_chars, '-' | '~') || find_prefix_or_tab!(subtitle_chars, '-')
+            find_prefix!(title_chars, '-' | '~') || find_prefix!(subtitle_chars, '-', '\t')
         }
         Some('(') => {
             find_prefix!(title_chars, '-' | '~' | '(')
-                || find_prefix_or_tab!(subtitle_chars, '-' | '~')
+                || find_prefix!(subtitle_chars, '-' | '~', '\t')
         }
         Some('[') => {
             find_prefix!(title_chars, '-' | '~' | '(' | '[')
-                || find_prefix_or_tab!(subtitle_chars, '-' | '~' | '(')
+                || find_prefix!(subtitle_chars, '-' | '~' | '(', '\t')
         }
         _ => true,
     } {
