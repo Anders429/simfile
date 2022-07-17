@@ -280,4 +280,132 @@ mod tests {
             "foo [bar".to_owned()
         );
     }
+
+    #[test]
+    fn combine_title_and_subtitle_dash_followed_by_tab() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "-bar\tbaz".to_owned()),
+            "foo\t-bar\tbaz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_tilde_followed_by_tab() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "~bar\tbaz".to_owned()),
+            "foo\t~bar\tbaz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_tilde_followed_by_dash() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "~bar -baz".to_owned()),
+            "foo\t~bar -baz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_tilde_followed_by_dash_no_space() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "~bar-baz".to_owned()),
+            "foo ~bar-baz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_parenthesis_followed_by_tab() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "(bar\tbaz".to_owned()),
+            "foo\t(bar\tbaz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_parenthesis_followed_by_dash() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "(bar -baz".to_owned()),
+            "foo\t(bar -baz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_parenthesis_followed_by_dash_no_space() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "(bar-baz".to_owned()),
+            "foo (bar-baz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_parenthesis_followed_by_tilde() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "(bar ~baz".to_owned()),
+            "foo\t(bar ~baz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_parenthesis_followed_by_tilde_no_space() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "(bar~baz".to_owned()),
+            "foo (bar~baz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_bracket_followed_by_tab() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "[bar\tbaz".to_owned()),
+            "foo\t[bar\tbaz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_bracket_followed_by_dash() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "[bar -baz".to_owned()),
+            "foo\t[bar -baz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_bracket_followed_by_dash_no_space() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "[bar-baz".to_owned()),
+            "foo [bar-baz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_bracket_followed_by_tilde() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "[bar ~baz".to_owned()),
+            "foo\t[bar ~baz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_bracket_followed_by_tilde_no_space() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "[bar~baz".to_owned()),
+            "foo [bar~baz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_bracket_followed_by_parenthesis() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "[bar (baz".to_owned()),
+            "foo\t[bar (baz".to_owned()
+        );
+    }
+
+    #[test]
+    fn combine_title_and_subtitle_bracket_followed_by_parenthesis_no_space() {
+        assert_eq!(
+            combine_title_and_subtitle("foo".to_owned(), "[bar(baz".to_owned()),
+            "foo [bar(baz".to_owned()
+        );
+    }
 }
