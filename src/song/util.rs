@@ -157,40 +157,24 @@ pub(in crate::song) fn combine_title_and_subtitle(title: String, subtitle: Strin
     // just isn't possible to combine in a reversible way.
     let mut title_chars = title.chars();
     let mut subtitle_chars = subtitle.chars();
-    match subtitle_chars.next() {
-        Some('-') => {
-            if find_prefix!(title_chars, '-') || subtitle.contains('\t') {
-                format!("{}\t{}", title, subtitle)
-            } else {
-                format!("{} {}", title, subtitle)
-            }
-        }
+    if match subtitle_chars.next() {
+        Some('-') => find_prefix!(title_chars, '-') || subtitle.contains('\t'),
         Some('~') => {
-            if find_prefix!(title_chars, '-' | '~') || find_prefix_or_tab!(subtitle_chars, '-') {
-                format!("{}\t{}", title, subtitle)
-            } else {
-                format!("{} {}", title, subtitle)
-            }
+            find_prefix!(title_chars, '-' | '~') || find_prefix_or_tab!(subtitle_chars, '-')
         }
         Some('(') => {
-            if find_prefix!(title_chars, '-' | '~' | '(')
+            find_prefix!(title_chars, '-' | '~' | '(')
                 || find_prefix_or_tab!(subtitle_chars, '-' | '~')
-            {
-                format!("{}\t{}", title, subtitle)
-            } else {
-                format!("{} {}", title, subtitle)
-            }
         }
         Some('[') => {
-            if find_prefix!(title_chars, '-' | '~' | '(' | '[')
+            find_prefix!(title_chars, '-' | '~' | '(' | '[')
                 || find_prefix_or_tab!(subtitle_chars, '-' | '~' | '(')
-            {
-                format!("{}\t{}", title, subtitle)
-            } else {
-                format!("{} {}", title, subtitle)
-            }
         }
-        _ => format!("{}\t{}", title, subtitle),
+        _ => true,
+    } {
+        format!("{}\t{}", title, subtitle)
+    } else {
+        format!("{} {}", title, subtitle)
     }
 }
 
