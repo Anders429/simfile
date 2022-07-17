@@ -408,4 +408,112 @@ mod tests {
             "foo [bar(baz".to_owned()
         );
     }
+
+    #[test]
+    fn split_and_combine_title_and_subtitle_at_tab() {
+        let title = "foo\tbar".to_owned();
+        assert_eq!(
+            {
+                let (title, subtitle) = split_title_and_subtitle(title.clone());
+                combine_title_and_subtitle(title, subtitle.unwrap())
+            },
+            title
+        );
+    }
+
+    #[test]
+    fn split_and_combine_title_and_subtitle_at_dash() {
+        let title = "foo -bar-".to_owned();
+        assert_eq!(
+            {
+                let (title, subtitle) = split_title_and_subtitle(title.clone());
+                combine_title_and_subtitle(title, subtitle.unwrap())
+            },
+            title
+        );
+    }
+
+    #[test]
+    fn split_and_combine_title_and_subtitle_at_tilde() {
+        let title = "foo ~bar~".to_owned();
+        assert_eq!(
+            {
+                let (title, subtitle) = split_title_and_subtitle(title.clone());
+                combine_title_and_subtitle(title, subtitle.unwrap())
+            },
+            title
+        );
+    }
+
+    #[test]
+    fn split_and_combine_title_and_subtitle_at_parenthesis() {
+        let title = "foo (bar)".to_owned();
+        assert_eq!(
+            {
+                let (title, subtitle) = split_title_and_subtitle(title.clone());
+                combine_title_and_subtitle(title, subtitle.unwrap())
+            },
+            title
+        );
+    }
+
+    #[test]
+    fn split_and_combine_title_and_subtitle_at_bracket() {
+        let title = "foo [bar]".to_owned();
+        assert_eq!(
+            {
+                let (title, subtitle) = split_title_and_subtitle(title.clone());
+                combine_title_and_subtitle(title, subtitle.unwrap())
+            },
+            title
+        );
+    }
+
+    #[test]
+    fn split_and_combine_title_and_subtitle_prefer_tab() {
+        let title = "foo [bar (baz ~qux -quux\tquuz".to_owned();
+        assert_eq!(
+            {
+                let (title, subtitle) = split_title_and_subtitle(title.clone());
+                combine_title_and_subtitle(title, subtitle.unwrap())
+            },
+            title
+        );
+    }
+
+    #[test]
+    fn split_and_combine_title_and_subtitle_prefer_dash() {
+        let title = "foo [bar (baz ~qux -quux".to_owned();
+        assert_eq!(
+            {
+                let (title, subtitle) = split_title_and_subtitle(title.clone());
+                combine_title_and_subtitle(title, subtitle.unwrap())
+            },
+            title
+        );
+    }
+
+    #[test]
+    fn split_and_combine_title_and_subtitle_prefer_tilde() {
+        let title = "foo [bar (baz ~qux".to_owned();
+        assert_eq!(
+            {
+                let (title, subtitle) = split_title_and_subtitle(title.clone());
+                combine_title_and_subtitle(title, subtitle.unwrap())
+            },
+            title
+        );
+    }
+
+    #[test]
+    fn split_and_combine_title_and_subtitle_prefer_parenthesis() {
+        let title = "foo [bar (baz".to_owned();
+        assert_eq!(
+            {
+                let (title, subtitle) = split_title_and_subtitle(title.clone());
+                combine_title_and_subtitle(title, subtitle.unwrap())
+            },
+            title
+        );
+    }
 }
