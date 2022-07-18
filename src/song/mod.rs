@@ -38,26 +38,26 @@ pub enum Duration {
     SixtyFourth,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Step<const PANELS: usize> {
     panels: [Panel; PANELS],
     /// Duration after this step until the next step.
     duration: Duration,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Steps<const PANELS: usize> {
     steps: Vec<Step<PANELS>>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Style {
     Single(Steps<4>),
     Double(Steps<8>),
     Couple(Steps<8>),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Difficulty {
     Beginner,
     Easy,
@@ -67,7 +67,7 @@ pub enum Difficulty {
     Edit,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Chart {
     difficulty: Difficulty,
     meter: u8,
@@ -75,7 +75,7 @@ pub struct Chart {
     style: Style,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Song {
     title: Option<String>,
     subtitle: Option<String>,
