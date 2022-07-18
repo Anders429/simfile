@@ -8,4 +8,5 @@ msd = "0.3.0"
 serde = {version = "1.0.138", default-features = false}
 
 [dev-dependencies]
+claim = "0.5.0"
 serde_test = "1.0.138"

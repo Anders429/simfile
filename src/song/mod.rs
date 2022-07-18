@@ -121,14 +121,3 @@ impl Song {
         .map_err(Error::Serialization)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test() {
-        let song = Song::read_msd("test/data/msd/AM3P.msd").unwrap();
-        song.write_msd("test/data/msd/AM3P_COPY.msd").unwrap();
-    }
-}
