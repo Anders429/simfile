@@ -4,11 +4,11 @@
 
 use claim::{assert_ok, assert_ok_eq};
 use std::fs::read_dir;
-use tempdir::TempDir;
+use tempfile::tempdir;
 
 #[test]
 fn msd() {
-    let temp_dir = TempDir::new("msd_round_trip").unwrap();
+    let temp_dir = tempdir().unwrap();
 
     for filename in read_dir("tests/data/msd").unwrap() {
         // These files all have quirks that make them not work right now.
