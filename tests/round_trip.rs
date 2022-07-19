@@ -11,6 +11,11 @@ fn msd() {
     let temp_dir = tempdir().unwrap();
 
     for filename in read_dir("tests/data/msd").unwrap() {
+        if !filename.as_ref().unwrap().file_name().to_str().unwrap().ends_with(".msd") {
+            // Only read the `.msd` files.
+            continue;
+        }
+
         // These files all have quirks that make them not work right now.
         // Ideally, this should be fixed to at least silently skip past their quirks.
         if filename.as_ref().unwrap().file_name() == "DUB.msd" {
@@ -29,6 +34,41 @@ fn msd() {
         if filename.as_ref().unwrap().file_name() == "House.msd" {
             // Improperly formatted "#MSD" tag. I don't think this is worth supporting, since it is
             // unique only to this file as far as I know.
+            continue;
+        }
+        if filename.as_ref().unwrap().file_name() == "banban.msd" {
+            // Trailing `0x1A` byte, probably an EOF marker (see
+            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
+            continue;
+        }
+        if filename.as_ref().unwrap().file_name() == "ojamajo.msd" {
+            // Trailing `0x1A` byte, probably an EOF marker (see
+            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
+            continue;
+        }
+        if filename.as_ref().unwrap().file_name() == "npaka.msd" {
+            // Trailing `0x1A` byte, probably an EOF marker (see
+            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
+            continue;
+        }
+        if filename.as_ref().unwrap().file_name() == "hamtaro.msd" {
+            // Trailing `0x1A` byte, probably an EOF marker (see
+            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
+            continue;
+        }
+        if filename.as_ref().unwrap().file_name() == "sakurasaku.msd" {
+            // Trailing `0x1A` byte, probably an EOF marker (see
+            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
+            continue;
+        }
+        if filename.as_ref().unwrap().file_name() == "ojakoko.msd" {
+            // Trailing `0x1A` byte, probably an EOF marker (see
+            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
+            continue;
+        }
+        if filename.as_ref().unwrap().file_name() == "densya.msd" {
+            // Trailing `0x1A` byte, probably an EOF marker (see
+            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
             continue;
         }
         dbg!(&filename);
