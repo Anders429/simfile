@@ -1,5 +1,5 @@
 //! Tests for "round trip" comparisons.
-//! 
+//!
 //! This is to ensure that songs written and then read do not lose any data.
 
 use claim::{assert_ok, assert_ok_eq};
@@ -11,7 +11,14 @@ fn msd() {
     let temp_dir = tempdir().unwrap();
 
     for filename in read_dir("tests/data/msd").unwrap() {
-        if !filename.as_ref().unwrap().file_name().to_str().unwrap().ends_with(".msd") {
+        if !filename
+            .as_ref()
+            .unwrap()
+            .file_name()
+            .to_str()
+            .unwrap()
+            .ends_with(".msd")
+        {
             // Only read the `.msd` files.
             continue;
         }
@@ -28,7 +35,7 @@ fn msd() {
         }
         if filename.as_ref().unwrap().file_name() == "B_FLY.msd" {
             // Couple steps have a "NORMAL" difficulty. This is leftover from an old .msd spec, and
-            // I'm not sure how to map it at this point. 
+            // I'm not sure how to map it at this point.
             continue;
         }
         if filename.as_ref().unwrap().file_name() == "House.msd" {

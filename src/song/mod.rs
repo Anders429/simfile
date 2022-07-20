@@ -101,9 +101,11 @@ impl Song {
     where
         P: AsRef<Path>,
     {
-        ::msd::from_reader::<_, msd::Song>(BufReader::new(ReadToCtrlZ::new(File::open(path).map_err(Error::Io)?)))
-            .map_err(Error::Deserialization)
-            .map(|song| song.into())
+        ::msd::from_reader::<_, msd::Song>(BufReader::new(ReadToCtrlZ::new(
+            File::open(path).map_err(Error::Io)?,
+        )))
+        .map_err(Error::Deserialization)
+        .map(|song| song.into())
     }
 
     /// Write this song simfile to a `.msd` formatted file.
