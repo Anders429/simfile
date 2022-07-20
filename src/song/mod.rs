@@ -7,6 +7,7 @@
 mod msd;
 mod util;
 
+use ctrl_z::ReadToCtrlZ;
 use std::{
     fs::File,
     io,
@@ -100,7 +101,7 @@ impl Song {
     where
         P: AsRef<Path>,
     {
-        ::msd::from_reader::<_, msd::Song>(BufReader::new(File::open(path).map_err(Error::Io)?))
+        ::msd::from_reader::<_, msd::Song>(BufReader::new(ReadToCtrlZ::new(File::open(path).map_err(Error::Io)?)))
             .map_err(Error::Deserialization)
             .map(|song| song.into())
     }

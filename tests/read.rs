@@ -31,41 +31,6 @@ fn msd() {
             // unique only to this file as far as I know.
             continue;
         }
-        if filename.as_ref().unwrap().file_name() == "banban.msd" {
-            // Trailing `0x1A` byte, probably an EOF marker (see
-            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
-            continue;
-        }
-        if filename.as_ref().unwrap().file_name() == "ojamajo.msd" {
-            // Trailing `0x1A` byte, probably an EOF marker (see
-            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
-            continue;
-        }
-        if filename.as_ref().unwrap().file_name() == "npaka.msd" {
-            // Trailing `0x1A` byte, probably an EOF marker (see
-            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
-            continue;
-        }
-        if filename.as_ref().unwrap().file_name() == "hamtaro.msd" {
-            // Trailing `0x1A` byte, probably an EOF marker (see
-            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
-            continue;
-        }
-        if filename.as_ref().unwrap().file_name() == "sakurasaku.msd" {
-            // Trailing `0x1A` byte, probably an EOF marker (see
-            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
-            continue;
-        }
-        if filename.as_ref().unwrap().file_name() == "ojakoko.msd" {
-            // Trailing `0x1A` byte, probably an EOF marker (see
-            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
-            continue;
-        }
-        if filename.as_ref().unwrap().file_name() == "densya.msd" {
-            // Trailing `0x1A` byte, probably an EOF marker (see
-            // https://en.wikipedia.org/wiki/Substitute_character#End_of_file).
-            continue;
-        }
         dbg!(&filename);
         assert_ok!(simfile::Song::read_msd(filename.unwrap().path()));
     }

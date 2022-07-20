@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ctrl-z = "0.1.0"
 msd = "0.3.0"
 serde = {version = "1.0.138", default-features = false}
 
