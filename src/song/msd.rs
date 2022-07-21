@@ -1243,7 +1243,10 @@ mod tests {
     use super::*;
     use crate::song;
     use claim::{assert_err_eq, assert_ok_eq};
-    use serde::{de, de::{Error, Unexpected}};
+    use serde::{
+        de,
+        de::{Error, Unexpected},
+    };
     use serde_test::{assert_tokens, Token};
 
     #[test]
@@ -1303,65 +1306,244 @@ mod tests {
 
     #[test]
     fn panels_none_from_serialized_byte() {
-        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'0'), Panels::None);
+        assert_ok_eq!(
+            Panels::from_serialized_byte::<de::value::Error>(b'0'),
+            Panels::None
+        );
     }
 
     #[test]
     fn panels_down_left_from_serialized_byte() {
-        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'1'), Panels::DownLeft);
+        assert_ok_eq!(
+            Panels::from_serialized_byte::<de::value::Error>(b'1'),
+            Panels::DownLeft
+        );
     }
 
     #[test]
     fn panels_down_from_serialized_byte() {
-        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'2'), Panels::Down);
+        assert_ok_eq!(
+            Panels::from_serialized_byte::<de::value::Error>(b'2'),
+            Panels::Down
+        );
     }
 
     #[test]
     fn panels_down_right_from_serialized_byte() {
-        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'3'), Panels::DownRight);
+        assert_ok_eq!(
+            Panels::from_serialized_byte::<de::value::Error>(b'3'),
+            Panels::DownRight
+        );
     }
 
     #[test]
     fn panels_left_from_serialized_byte() {
-        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'4'), Panels::Left);
+        assert_ok_eq!(
+            Panels::from_serialized_byte::<de::value::Error>(b'4'),
+            Panels::Left
+        );
     }
 
     #[test]
     fn panels_right_from_serialized_byte() {
-        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'6'), Panels::Right);
+        assert_ok_eq!(
+            Panels::from_serialized_byte::<de::value::Error>(b'6'),
+            Panels::Right
+        );
     }
 
     #[test]
     fn panels_up_left_from_serialized_byte() {
-        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'7'), Panels::UpLeft);
+        assert_ok_eq!(
+            Panels::from_serialized_byte::<de::value::Error>(b'7'),
+            Panels::UpLeft
+        );
     }
 
     #[test]
     fn panels_up_from_serialized_byte() {
-        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'8'), Panels::Up);
+        assert_ok_eq!(
+            Panels::from_serialized_byte::<de::value::Error>(b'8'),
+            Panels::Up
+        );
     }
 
     #[test]
     fn panels_up_right_from_serialized_byte() {
-        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'9'), Panels::UpRight);
+        assert_ok_eq!(
+            Panels::from_serialized_byte::<de::value::Error>(b'9'),
+            Panels::UpRight
+        );
     }
 
     #[test]
     fn panels_up_down_from_serialized_byte() {
-        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'A'), Panels::UpDown);
+        assert_ok_eq!(
+            Panels::from_serialized_byte::<de::value::Error>(b'A'),
+            Panels::UpDown
+        );
     }
 
     #[test]
     fn panels_left_right_from_serialized_byte() {
-        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'B'), Panels::LeftRight);
+        assert_ok_eq!(
+            Panels::from_serialized_byte::<de::value::Error>(b'B'),
+            Panels::LeftRight
+        );
     }
 
     #[test]
     fn panels_invalid_from_serialized_byte() {
-        assert_err_eq!(Panels::from_serialized_byte::<de::value::Error>(b'C'), de::value::Error::invalid_value(
-            Unexpected::Char('C'),
-            &"`0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
-        ));
+        assert_err_eq!(
+            Panels::from_serialized_byte::<de::value::Error>(b'C'),
+            de::value::Error::invalid_value(
+                Unexpected::Char('C'),
+                &"`0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+            )
+        );
+    }
+
+    #[test]
+    fn panels_none_into_generic() {
+        assert_eq!(
+            Into::<[song::Panel; 4]>::into(Panels::None),
+            [
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::None
+            ]
+        );
+    }
+
+    #[test]
+    fn panels_down_left_into_generic() {
+        assert_eq!(
+            Into::<[song::Panel; 4]>::into(Panels::DownLeft),
+            [
+                song::Panel::Step,
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::None
+            ]
+        );
+    }
+
+    #[test]
+    fn panels_down_into_generic() {
+        assert_eq!(
+            Into::<[song::Panel; 4]>::into(Panels::Down),
+            [
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::None
+            ]
+        );
+    }
+
+    #[test]
+    fn panels_down_right_into_generic() {
+        assert_eq!(
+            Into::<[song::Panel; 4]>::into(Panels::DownRight),
+            [
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::Step
+            ]
+        );
+    }
+
+    #[test]
+    fn panels_left_into_generic() {
+        assert_eq!(
+            Into::<[song::Panel; 4]>::into(Panels::Left),
+            [
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::None,
+            ]
+        );
+    }
+
+    #[test]
+    fn panels_right_into_generic() {
+        assert_eq!(
+            Into::<[song::Panel; 4]>::into(Panels::Right),
+            [
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::Step
+            ]
+        );
+    }
+
+    #[test]
+    fn panels_up_left_into_generic() {
+        assert_eq!(
+            Into::<[song::Panel; 4]>::into(Panels::UpLeft),
+            [
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::None
+            ]
+        );
+    }
+
+    #[test]
+    fn panels_up_into_generic() {
+        assert_eq!(
+            Into::<[song::Panel; 4]>::into(Panels::Up),
+            [
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::None
+            ]
+        );
+    }
+
+    #[test]
+    fn panels_up_right_into_generic() {
+        assert_eq!(
+            Into::<[song::Panel; 4]>::into(Panels::UpRight),
+            [
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::Step
+            ]
+        );
+    }
+
+    #[test]
+    fn panels_up_down_into_generic() {
+        assert_eq!(
+            Into::<[song::Panel; 4]>::into(Panels::UpDown),
+            [
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::Step,
+                song::Panel::None
+            ]
+        );
+    }
+
+    #[test]
+    fn panels_left_right_into_generic() {
+        assert_eq!(
+            Into::<[song::Panel; 4]>::into(Panels::LeftRight),
+            [
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::Step
+            ]
+        );
     }
 
     #[test]
