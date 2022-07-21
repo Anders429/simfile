@@ -1704,6 +1704,106 @@ mod tests {
     }
 
     #[test]
+    fn duration_serialization_capacity_requirement_eighth() {
+        assert_eq!(Duration::Eighth.serialization_capacity_requirement(None), 1);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_sixteenth() {
+        assert_eq!(Duration::Sixteenth.serialization_capacity_requirement(None), 2);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_twentyfourth() {
+        assert_eq!(Duration::TwentyFourth.serialization_capacity_requirement(None), 2);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_sixtyfourth() {
+        assert_eq!(Duration::SixtyFourth.serialization_capacity_requirement(None), 2);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_eighth_after_eighth() {
+        assert_eq!(Duration::Eighth.serialization_capacity_requirement(Some(Duration::Eighth)), 1);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_eighth_after_sixteenth() {
+        assert_eq!(Duration::Eighth.serialization_capacity_requirement(Some(Duration::Sixteenth)), 2);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_eighth_after_twentyfourth() {
+        assert_eq!(Duration::Eighth.serialization_capacity_requirement(Some(Duration::TwentyFourth)), 2);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_eighth_after_sixtyfourth() {
+        assert_eq!(Duration::Eighth.serialization_capacity_requirement(Some(Duration::SixtyFourth)), 2);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_sixteenth_after_eighth() {
+        assert_eq!(Duration::Sixteenth.serialization_capacity_requirement(Some(Duration::Eighth)), 2);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_sixteenth_after_sixteenth() {
+        assert_eq!(Duration::Sixteenth.serialization_capacity_requirement(Some(Duration::Sixteenth)), 1);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_sixteenth_after_twentyfourth() {
+        assert_eq!(Duration::Sixteenth.serialization_capacity_requirement(Some(Duration::TwentyFourth)), 3);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_sixteenth_after_sixtyfourth() {
+        assert_eq!(Duration::Sixteenth.serialization_capacity_requirement(Some(Duration::SixtyFourth)), 3);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_twentyfourth_after_eighth() {
+        assert_eq!(Duration::TwentyFourth.serialization_capacity_requirement(Some(Duration::Eighth)), 2);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_twentyfourth_after_sixteenth() {
+        assert_eq!(Duration::TwentyFourth.serialization_capacity_requirement(Some(Duration::Sixteenth)), 3);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_twentyfourth_after_twentyfourth() {
+        assert_eq!(Duration::TwentyFourth.serialization_capacity_requirement(Some(Duration::TwentyFourth)), 1);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_twentyfourth_after_sixtyfourth() {
+        assert_eq!(Duration::TwentyFourth.serialization_capacity_requirement(Some(Duration::SixtyFourth)), 3);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_sixtyfourth_after_eighth() {
+        assert_eq!(Duration::SixtyFourth.serialization_capacity_requirement(Some(Duration::Eighth)), 2);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_sixtyfourth_after_sixteenth() {
+        assert_eq!(Duration::SixtyFourth.serialization_capacity_requirement(Some(Duration::Sixteenth)), 3);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_sixtyfourth_after_twentyfourth() {
+        assert_eq!(Duration::SixtyFourth.serialization_capacity_requirement(Some(Duration::TwentyFourth)), 3);
+    }
+
+    #[test]
+    fn duration_serialization_capacity_requirement_sixtyfourth_after_sixtyfourth() {
+        assert_eq!(Duration::SixtyFourth.serialization_capacity_requirement(Some(Duration::SixtyFourth)), 1);
+    }
+
+    #[test]
     fn steps_ser_de_empty() {
         assert_tokens(&Steps { steps: Vec::new() }, &[Token::Bytes(b"")]);
     }
