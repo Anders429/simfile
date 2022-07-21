@@ -10,5 +10,6 @@ serde = {version = "1.0.138", default-features = false}
 
 [dev-dependencies]
 claim = {git = "https://github.com/Anders429/rust-claim"}
+more-asserts = "0.3.0"
 serde_test = "1.0.138"
 tempfile = "3.3.0"

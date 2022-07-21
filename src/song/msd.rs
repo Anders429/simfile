@@ -1243,6 +1243,7 @@ mod tests {
     use super::*;
     use crate::song;
     use claim::{assert_err_eq, assert_ok_eq};
+    use more_asserts::assert_gt;
     use serde::{
         de,
         de::Unexpected,
@@ -1822,6 +1823,56 @@ mod tests {
     fn duration_as_isize_sixtyfourth() {
         assert_eq!(Duration::SixtyFourth.as_isize(), 3);
     }
+
+    #[test]
+    fn duration_compare_eighth_eighth() {
+        assert_eq!(Duration::Eighth, Duration::Eighth);
+    }
+
+    #[test]
+    fn duration_compare_eighth_sixteenth() {
+        assert_gt!(Duration::Eighth, Duration::Sixteenth);
+    }
+
+    #[test]
+    fn duration_compare_eighth_twentyfourth() {
+        assert_gt!(Duration::Eighth, Duration::TwentyFourth);
+    }
+
+    #[test]
+    fn duration_compare_eighth_sixtyfourth() {
+        assert_gt!(Duration::Eighth, Duration::SixtyFourth);
+    }
+
+    #[test]
+    fn duration_compare_sixteenth_sixteenth() {
+        assert_eq!(Duration::Sixteenth, Duration::Sixteenth);
+    }
+
+    #[test]
+    fn duration_compare_sixteenth_twentyfourth() {
+        assert_gt!(Duration::Sixteenth, Duration::TwentyFourth);
+    }
+
+    #[test]
+    fn duration_compare_sixteenth_sixtyfourth() {
+        assert_gt!(Duration::Sixteenth, Duration::SixtyFourth);
+    }
+
+    #[test]
+    fn duration_compare_twentyfourth_twentyfourth() {
+        assert_eq!(Duration::TwentyFourth, Duration::TwentyFourth);
+    }
+
+    #[test]
+    fn duration_compare_twentyfourth_sixtyfourth() {
+        assert_gt!(Duration::TwentyFourth, Duration::SixtyFourth);
+    }    
+
+    #[test]
+    fn duration_compare_sixtyfourth_sixtyfourth() {
+        assert_eq!(Duration::SixtyFourth, Duration::SixtyFourth);
+    }    
 
     #[test]
     fn steps_ser_de_empty() {
