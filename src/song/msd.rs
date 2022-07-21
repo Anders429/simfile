@@ -1804,6 +1804,26 @@ mod tests {
     }
 
     #[test]
+    fn duration_as_isize_eighth() {
+        assert_eq!(Duration::Eighth.as_isize(), 24);
+    }
+
+    #[test]
+    fn duration_as_isize_sixteenth() {
+        assert_eq!(Duration::Sixteenth.as_isize(), 12);
+    }
+
+    #[test]
+    fn duration_as_isize_twentyfourth() {
+        assert_eq!(Duration::TwentyFourth.as_isize(), 8);
+    }
+
+    #[test]
+    fn duration_as_isize_sixtyfourth() {
+        assert_eq!(Duration::SixtyFourth.as_isize(), 3);
+    }
+
+    #[test]
     fn steps_ser_de_empty() {
         assert_tokens(&Steps { steps: Vec::new() }, &[Token::Bytes(b"")]);
     }
