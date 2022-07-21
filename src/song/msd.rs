@@ -1915,6 +1915,186 @@ mod tests {
     }
 
     #[test]
+    fn step_eighth_serialize_to_bytes() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::None, duration: Duration::Eighth}.serialize_to_bytes(&mut bytes, None);
+
+        assert_eq!(bytes, b"0");
+    }
+
+    #[test]
+    fn step_sixteenth_serialize_to_bytes() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::DownLeft, duration: Duration::Sixteenth}.serialize_to_bytes(&mut bytes, None);
+
+        assert_eq!(bytes, b"(1");
+    }
+
+    #[test]
+    fn step_twentyfourth_serialize_to_bytes() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::Down, duration: Duration::TwentyFourth}.serialize_to_bytes(&mut bytes, None);
+
+        assert_eq!(bytes, b"[2");
+    }
+
+    #[test]
+    fn step_sixtyfourth_serialize_to_bytes() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::DownRight, duration: Duration::SixtyFourth}.serialize_to_bytes(&mut bytes, None);
+
+        assert_eq!(bytes, b"{3");
+    }
+
+    #[test]
+    fn step_eighth_serialize_to_bytes_after_eighth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::Left, duration: Duration::Eighth}.serialize_to_bytes(&mut bytes, Some(Duration::Eighth));
+
+        assert_eq!(bytes, b"4");
+    }
+
+    #[test]
+    fn step_eighth_serialize_to_bytes_after_sixteenth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::Right, duration: Duration::Eighth}.serialize_to_bytes(&mut bytes, Some(Duration::Sixteenth));
+
+        assert_eq!(bytes, b")6");
+    }
+
+    #[test]
+    fn step_eighth_serialize_to_bytes_after_twentyfourth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::UpLeft, duration: Duration::Eighth}.serialize_to_bytes(&mut bytes, Some(Duration::TwentyFourth));
+
+        assert_eq!(bytes, b"]7");
+    }
+
+    #[test]
+    fn step_eighth_serialize_to_bytes_after_sixtyfourth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::Up, duration: Duration::Eighth}.serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
+
+        assert_eq!(bytes, b"}8");
+    }
+
+    #[test]
+    fn step_sixteenth_serialize_to_bytes_after_eighth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::UpRight, duration: Duration::Sixteenth}.serialize_to_bytes(&mut bytes, Some(Duration::Eighth));
+
+        assert_eq!(bytes, b"(9");
+    }
+
+    #[test]
+    fn step_sixteenth_serialize_to_bytes_after_sixteenth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::UpDown, duration: Duration::Sixteenth}.serialize_to_bytes(&mut bytes, Some(Duration::Sixteenth));
+
+        assert_eq!(bytes, b"A");
+    }
+
+    #[test]
+    fn step_sixteenth_serialize_to_bytes_after_twentyfourth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::LeftRight, duration: Duration::Sixteenth}.serialize_to_bytes(&mut bytes, Some(Duration::TwentyFourth));
+
+        assert_eq!(bytes, b"](B");
+    }
+
+    #[test]
+    fn step_sixteenth_serialize_to_bytes_after_sixtyfourth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::None, duration: Duration::Sixteenth}.serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
+
+        assert_eq!(bytes, b"}(0");
+    }
+
+    #[test]
+    fn step_twentyfourth_serialize_to_bytes_after_eighth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::DownLeft, duration: Duration::TwentyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::Eighth));
+
+        assert_eq!(bytes, b"[1");
+    }
+
+    #[test]
+    fn step_twentyfourth_serialize_to_bytes_after_sixteenth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::Down, duration: Duration::TwentyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::Sixteenth));
+
+        assert_eq!(bytes, b")[2");
+    }
+
+    #[test]
+    fn step_twentyfourth_serialize_to_bytes_after_twentyfourth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::DownRight, duration: Duration::TwentyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::TwentyFourth));
+
+        assert_eq!(bytes, b"3");
+    }
+
+    #[test]
+    fn step_twentyfourth_serialize_to_bytes_after_sixtyfourth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::Left, duration: Duration::TwentyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
+
+        assert_eq!(bytes, b"}[4");
+    }
+
+    #[test]
+    fn step_sixtyfourth_serialize_to_bytes_after_eighth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::Right, duration: Duration::SixtyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::Eighth));
+
+        assert_eq!(bytes, b"{6");
+    }
+
+    #[test]
+    fn step_sixtyfourth_serialize_to_bytes_after_sixteenth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::UpLeft, duration: Duration::SixtyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::Sixteenth));
+
+        assert_eq!(bytes, b"){7");
+    }
+
+    #[test]
+    fn step_sixtyfourth_serialize_to_bytes_after_twentyfourth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::Up, duration: Duration::SixtyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::TwentyFourth));
+
+        assert_eq!(bytes, b"]{8");
+    }
+
+    #[test]
+    fn step_sixtyfourth_serialize_to_bytes_after_sixtyfourth() {
+        let mut bytes = Vec::new();
+
+        Step {panels: Panels::UpRight, duration: Duration::SixtyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
+
+        assert_eq!(bytes, b"9");
+    }
+
+    #[test]
     fn steps_ser_de_empty() {
         assert_tokens(&Steps { steps: Vec::new() }, &[Token::Bytes(b"")]);
     }
