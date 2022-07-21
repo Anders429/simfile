@@ -1242,6 +1242,8 @@ impl TryFrom<song::Song> for Song {
 mod tests {
     use super::*;
     use crate::song;
+    use claim::{assert_err_eq, assert_ok_eq};
+    use serde::{de, de::{Error, Unexpected}};
     use serde_test::{assert_tokens, Token};
 
     #[test]
@@ -1297,6 +1299,69 @@ mod tests {
     #[test]
     fn panels_left_right_as_serialized_byte() {
         assert_eq!(Panels::LeftRight.as_serialized_byte(), b'B');
+    }
+
+    #[test]
+    fn panels_none_from_serialized_byte() {
+        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'0'), Panels::None);
+    }
+
+    #[test]
+    fn panels_down_left_from_serialized_byte() {
+        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'1'), Panels::DownLeft);
+    }
+
+    #[test]
+    fn panels_down_from_serialized_byte() {
+        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'2'), Panels::Down);
+    }
+
+    #[test]
+    fn panels_down_right_from_serialized_byte() {
+        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'3'), Panels::DownRight);
+    }
+
+    #[test]
+    fn panels_left_from_serialized_byte() {
+        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'4'), Panels::Left);
+    }
+
+    #[test]
+    fn panels_right_from_serialized_byte() {
+        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'6'), Panels::Right);
+    }
+
+    #[test]
+    fn panels_up_left_from_serialized_byte() {
+        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'7'), Panels::UpLeft);
+    }
+
+    #[test]
+    fn panels_up_from_serialized_byte() {
+        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'8'), Panels::Up);
+    }
+
+    #[test]
+    fn panels_up_right_from_serialized_byte() {
+        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'9'), Panels::UpRight);
+    }
+
+    #[test]
+    fn panels_up_down_from_serialized_byte() {
+        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'A'), Panels::UpDown);
+    }
+
+    #[test]
+    fn panels_left_right_from_serialized_byte() {
+        assert_ok_eq!(Panels::from_serialized_byte::<de::value::Error>(b'B'), Panels::LeftRight);
+    }
+
+    #[test]
+    fn panels_invalid_from_serialized_byte() {
+        assert_err_eq!(Panels::from_serialized_byte::<de::value::Error>(b'C'), de::value::Error::invalid_value(
+            Unexpected::Char('C'),
+            &"`0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+        ));
     }
 
     #[test]
