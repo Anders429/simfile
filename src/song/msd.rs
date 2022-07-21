@@ -1244,11 +1244,8 @@ mod tests {
     use crate::song;
     use claim::{assert_err_eq, assert_ok_eq};
     use more_asserts::assert_gt;
-    use serde::{
-        de,
-        de::Unexpected,
-    };
     use serde::de::Error as DeError;
+    use serde::{de, de::Unexpected};
     use serde_test::{assert_tokens, Token};
 
     #[test]
@@ -1711,97 +1708,154 @@ mod tests {
 
     #[test]
     fn duration_serialization_capacity_requirement_sixteenth() {
-        assert_eq!(Duration::Sixteenth.serialization_capacity_requirement(None), 2);
+        assert_eq!(
+            Duration::Sixteenth.serialization_capacity_requirement(None),
+            2
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_twentyfourth() {
-        assert_eq!(Duration::TwentyFourth.serialization_capacity_requirement(None), 2);
+        assert_eq!(
+            Duration::TwentyFourth.serialization_capacity_requirement(None),
+            2
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_sixtyfourth() {
-        assert_eq!(Duration::SixtyFourth.serialization_capacity_requirement(None), 2);
+        assert_eq!(
+            Duration::SixtyFourth.serialization_capacity_requirement(None),
+            2
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_eighth_after_eighth() {
-        assert_eq!(Duration::Eighth.serialization_capacity_requirement(Some(Duration::Eighth)), 1);
+        assert_eq!(
+            Duration::Eighth.serialization_capacity_requirement(Some(Duration::Eighth)),
+            1
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_eighth_after_sixteenth() {
-        assert_eq!(Duration::Eighth.serialization_capacity_requirement(Some(Duration::Sixteenth)), 2);
+        assert_eq!(
+            Duration::Eighth.serialization_capacity_requirement(Some(Duration::Sixteenth)),
+            2
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_eighth_after_twentyfourth() {
-        assert_eq!(Duration::Eighth.serialization_capacity_requirement(Some(Duration::TwentyFourth)), 2);
+        assert_eq!(
+            Duration::Eighth.serialization_capacity_requirement(Some(Duration::TwentyFourth)),
+            2
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_eighth_after_sixtyfourth() {
-        assert_eq!(Duration::Eighth.serialization_capacity_requirement(Some(Duration::SixtyFourth)), 2);
+        assert_eq!(
+            Duration::Eighth.serialization_capacity_requirement(Some(Duration::SixtyFourth)),
+            2
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_sixteenth_after_eighth() {
-        assert_eq!(Duration::Sixteenth.serialization_capacity_requirement(Some(Duration::Eighth)), 2);
+        assert_eq!(
+            Duration::Sixteenth.serialization_capacity_requirement(Some(Duration::Eighth)),
+            2
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_sixteenth_after_sixteenth() {
-        assert_eq!(Duration::Sixteenth.serialization_capacity_requirement(Some(Duration::Sixteenth)), 1);
+        assert_eq!(
+            Duration::Sixteenth.serialization_capacity_requirement(Some(Duration::Sixteenth)),
+            1
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_sixteenth_after_twentyfourth() {
-        assert_eq!(Duration::Sixteenth.serialization_capacity_requirement(Some(Duration::TwentyFourth)), 3);
+        assert_eq!(
+            Duration::Sixteenth.serialization_capacity_requirement(Some(Duration::TwentyFourth)),
+            3
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_sixteenth_after_sixtyfourth() {
-        assert_eq!(Duration::Sixteenth.serialization_capacity_requirement(Some(Duration::SixtyFourth)), 3);
+        assert_eq!(
+            Duration::Sixteenth.serialization_capacity_requirement(Some(Duration::SixtyFourth)),
+            3
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_twentyfourth_after_eighth() {
-        assert_eq!(Duration::TwentyFourth.serialization_capacity_requirement(Some(Duration::Eighth)), 2);
+        assert_eq!(
+            Duration::TwentyFourth.serialization_capacity_requirement(Some(Duration::Eighth)),
+            2
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_twentyfourth_after_sixteenth() {
-        assert_eq!(Duration::TwentyFourth.serialization_capacity_requirement(Some(Duration::Sixteenth)), 3);
+        assert_eq!(
+            Duration::TwentyFourth.serialization_capacity_requirement(Some(Duration::Sixteenth)),
+            3
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_twentyfourth_after_twentyfourth() {
-        assert_eq!(Duration::TwentyFourth.serialization_capacity_requirement(Some(Duration::TwentyFourth)), 1);
+        assert_eq!(
+            Duration::TwentyFourth.serialization_capacity_requirement(Some(Duration::TwentyFourth)),
+            1
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_twentyfourth_after_sixtyfourth() {
-        assert_eq!(Duration::TwentyFourth.serialization_capacity_requirement(Some(Duration::SixtyFourth)), 3);
+        assert_eq!(
+            Duration::TwentyFourth.serialization_capacity_requirement(Some(Duration::SixtyFourth)),
+            3
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_sixtyfourth_after_eighth() {
-        assert_eq!(Duration::SixtyFourth.serialization_capacity_requirement(Some(Duration::Eighth)), 2);
+        assert_eq!(
+            Duration::SixtyFourth.serialization_capacity_requirement(Some(Duration::Eighth)),
+            2
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_sixtyfourth_after_sixteenth() {
-        assert_eq!(Duration::SixtyFourth.serialization_capacity_requirement(Some(Duration::Sixteenth)), 3);
+        assert_eq!(
+            Duration::SixtyFourth.serialization_capacity_requirement(Some(Duration::Sixteenth)),
+            3
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_sixtyfourth_after_twentyfourth() {
-        assert_eq!(Duration::SixtyFourth.serialization_capacity_requirement(Some(Duration::TwentyFourth)), 3);
+        assert_eq!(
+            Duration::SixtyFourth.serialization_capacity_requirement(Some(Duration::TwentyFourth)),
+            3
+        );
     }
 
     #[test]
     fn duration_serialization_capacity_requirement_sixtyfourth_after_sixtyfourth() {
-        assert_eq!(Duration::SixtyFourth.serialization_capacity_requirement(Some(Duration::SixtyFourth)), 1);
+        assert_eq!(
+            Duration::SixtyFourth.serialization_capacity_requirement(Some(Duration::SixtyFourth)),
+            1
+        );
     }
 
     #[test]
@@ -1867,7 +1921,7 @@ mod tests {
     #[test]
     fn duration_compare_twentyfourth_sixtyfourth() {
         assert_gt!(Duration::TwentyFourth, Duration::SixtyFourth);
-    }    
+    }
 
     #[test]
     fn duration_compare_sixtyfourth_sixtyfourth() {
@@ -1876,22 +1930,34 @@ mod tests {
 
     #[test]
     fn duration_eighth_into_generic() {
-        assert_eq!(song::Duration::from(Duration::Eighth), song::Duration::Eighth);
+        assert_eq!(
+            song::Duration::from(Duration::Eighth),
+            song::Duration::Eighth
+        );
     }
 
     #[test]
     fn duration_sixteenth_into_generic() {
-        assert_eq!(song::Duration::from(Duration::Sixteenth), song::Duration::Sixteenth);
+        assert_eq!(
+            song::Duration::from(Duration::Sixteenth),
+            song::Duration::Sixteenth
+        );
     }
 
     #[test]
     fn duration_twentyfourth_into_generic() {
-        assert_eq!(song::Duration::from(Duration::TwentyFourth), song::Duration::TwentyFourth);
+        assert_eq!(
+            song::Duration::from(Duration::TwentyFourth),
+            song::Duration::TwentyFourth
+        );
     }
 
     #[test]
     fn duration_sixtyfourth_into_generic() {
-        assert_eq!(song::Duration::from(Duration::SixtyFourth), song::Duration::SixtyFourth);
+        assert_eq!(
+            song::Duration::from(Duration::SixtyFourth),
+            song::Duration::SixtyFourth
+        );
     }
 
     #[test]
@@ -1901,24 +1967,37 @@ mod tests {
 
     #[test]
     fn duration_sixteenth_try_from_generic() {
-        assert_ok_eq!(Duration::try_from(song::Duration::Sixteenth), Duration::Sixteenth);
+        assert_ok_eq!(
+            Duration::try_from(song::Duration::Sixteenth),
+            Duration::Sixteenth
+        );
     }
 
     #[test]
     fn duration_twentyfourth_try_from_generic() {
-        assert_ok_eq!(Duration::try_from(song::Duration::TwentyFourth), Duration::TwentyFourth);
+        assert_ok_eq!(
+            Duration::try_from(song::Duration::TwentyFourth),
+            Duration::TwentyFourth
+        );
     }
 
     #[test]
     fn duration_sixtyfourth_try_from_generic() {
-        assert_ok_eq!(Duration::try_from(song::Duration::SixtyFourth), Duration::SixtyFourth);
+        assert_ok_eq!(
+            Duration::try_from(song::Duration::SixtyFourth),
+            Duration::SixtyFourth
+        );
     }
 
     #[test]
     fn step_eighth_serialize_to_bytes() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::None, duration: Duration::Eighth}.serialize_to_bytes(&mut bytes, None);
+        Step {
+            panels: Panels::None,
+            duration: Duration::Eighth,
+        }
+        .serialize_to_bytes(&mut bytes, None);
 
         assert_eq!(bytes, b"0");
     }
@@ -1927,7 +2006,11 @@ mod tests {
     fn step_sixteenth_serialize_to_bytes() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::DownLeft, duration: Duration::Sixteenth}.serialize_to_bytes(&mut bytes, None);
+        Step {
+            panels: Panels::DownLeft,
+            duration: Duration::Sixteenth,
+        }
+        .serialize_to_bytes(&mut bytes, None);
 
         assert_eq!(bytes, b"(1");
     }
@@ -1936,7 +2019,11 @@ mod tests {
     fn step_twentyfourth_serialize_to_bytes() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::Down, duration: Duration::TwentyFourth}.serialize_to_bytes(&mut bytes, None);
+        Step {
+            panels: Panels::Down,
+            duration: Duration::TwentyFourth,
+        }
+        .serialize_to_bytes(&mut bytes, None);
 
         assert_eq!(bytes, b"[2");
     }
@@ -1945,7 +2032,11 @@ mod tests {
     fn step_sixtyfourth_serialize_to_bytes() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::DownRight, duration: Duration::SixtyFourth}.serialize_to_bytes(&mut bytes, None);
+        Step {
+            panels: Panels::DownRight,
+            duration: Duration::SixtyFourth,
+        }
+        .serialize_to_bytes(&mut bytes, None);
 
         assert_eq!(bytes, b"{3");
     }
@@ -1954,7 +2045,11 @@ mod tests {
     fn step_eighth_serialize_to_bytes_after_eighth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::Left, duration: Duration::Eighth}.serialize_to_bytes(&mut bytes, Some(Duration::Eighth));
+        Step {
+            panels: Panels::Left,
+            duration: Duration::Eighth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::Eighth));
 
         assert_eq!(bytes, b"4");
     }
@@ -1963,7 +2058,11 @@ mod tests {
     fn step_eighth_serialize_to_bytes_after_sixteenth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::Right, duration: Duration::Eighth}.serialize_to_bytes(&mut bytes, Some(Duration::Sixteenth));
+        Step {
+            panels: Panels::Right,
+            duration: Duration::Eighth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::Sixteenth));
 
         assert_eq!(bytes, b")6");
     }
@@ -1972,7 +2071,11 @@ mod tests {
     fn step_eighth_serialize_to_bytes_after_twentyfourth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::UpLeft, duration: Duration::Eighth}.serialize_to_bytes(&mut bytes, Some(Duration::TwentyFourth));
+        Step {
+            panels: Panels::UpLeft,
+            duration: Duration::Eighth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::TwentyFourth));
 
         assert_eq!(bytes, b"]7");
     }
@@ -1981,7 +2084,11 @@ mod tests {
     fn step_eighth_serialize_to_bytes_after_sixtyfourth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::Up, duration: Duration::Eighth}.serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
+        Step {
+            panels: Panels::Up,
+            duration: Duration::Eighth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
 
         assert_eq!(bytes, b"}8");
     }
@@ -1990,7 +2097,11 @@ mod tests {
     fn step_sixteenth_serialize_to_bytes_after_eighth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::UpRight, duration: Duration::Sixteenth}.serialize_to_bytes(&mut bytes, Some(Duration::Eighth));
+        Step {
+            panels: Panels::UpRight,
+            duration: Duration::Sixteenth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::Eighth));
 
         assert_eq!(bytes, b"(9");
     }
@@ -1999,7 +2110,11 @@ mod tests {
     fn step_sixteenth_serialize_to_bytes_after_sixteenth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::UpDown, duration: Duration::Sixteenth}.serialize_to_bytes(&mut bytes, Some(Duration::Sixteenth));
+        Step {
+            panels: Panels::UpDown,
+            duration: Duration::Sixteenth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::Sixteenth));
 
         assert_eq!(bytes, b"A");
     }
@@ -2008,7 +2123,11 @@ mod tests {
     fn step_sixteenth_serialize_to_bytes_after_twentyfourth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::LeftRight, duration: Duration::Sixteenth}.serialize_to_bytes(&mut bytes, Some(Duration::TwentyFourth));
+        Step {
+            panels: Panels::LeftRight,
+            duration: Duration::Sixteenth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::TwentyFourth));
 
         assert_eq!(bytes, b"](B");
     }
@@ -2017,7 +2136,11 @@ mod tests {
     fn step_sixteenth_serialize_to_bytes_after_sixtyfourth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::None, duration: Duration::Sixteenth}.serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
+        Step {
+            panels: Panels::None,
+            duration: Duration::Sixteenth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
 
         assert_eq!(bytes, b"}(0");
     }
@@ -2026,7 +2149,11 @@ mod tests {
     fn step_twentyfourth_serialize_to_bytes_after_eighth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::DownLeft, duration: Duration::TwentyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::Eighth));
+        Step {
+            panels: Panels::DownLeft,
+            duration: Duration::TwentyFourth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::Eighth));
 
         assert_eq!(bytes, b"[1");
     }
@@ -2035,7 +2162,11 @@ mod tests {
     fn step_twentyfourth_serialize_to_bytes_after_sixteenth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::Down, duration: Duration::TwentyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::Sixteenth));
+        Step {
+            panels: Panels::Down,
+            duration: Duration::TwentyFourth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::Sixteenth));
 
         assert_eq!(bytes, b")[2");
     }
@@ -2044,7 +2175,11 @@ mod tests {
     fn step_twentyfourth_serialize_to_bytes_after_twentyfourth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::DownRight, duration: Duration::TwentyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::TwentyFourth));
+        Step {
+            panels: Panels::DownRight,
+            duration: Duration::TwentyFourth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::TwentyFourth));
 
         assert_eq!(bytes, b"3");
     }
@@ -2053,7 +2188,11 @@ mod tests {
     fn step_twentyfourth_serialize_to_bytes_after_sixtyfourth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::Left, duration: Duration::TwentyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
+        Step {
+            panels: Panels::Left,
+            duration: Duration::TwentyFourth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
 
         assert_eq!(bytes, b"}[4");
     }
@@ -2062,7 +2201,11 @@ mod tests {
     fn step_sixtyfourth_serialize_to_bytes_after_eighth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::Right, duration: Duration::SixtyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::Eighth));
+        Step {
+            panels: Panels::Right,
+            duration: Duration::SixtyFourth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::Eighth));
 
         assert_eq!(bytes, b"{6");
     }
@@ -2071,7 +2214,11 @@ mod tests {
     fn step_sixtyfourth_serialize_to_bytes_after_sixteenth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::UpLeft, duration: Duration::SixtyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::Sixteenth));
+        Step {
+            panels: Panels::UpLeft,
+            duration: Duration::SixtyFourth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::Sixteenth));
 
         assert_eq!(bytes, b"){7");
     }
@@ -2080,7 +2227,11 @@ mod tests {
     fn step_sixtyfourth_serialize_to_bytes_after_twentyfourth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::Up, duration: Duration::SixtyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::TwentyFourth));
+        Step {
+            panels: Panels::Up,
+            duration: Duration::SixtyFourth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::TwentyFourth));
 
         assert_eq!(bytes, b"]{8");
     }
@@ -2089,7 +2240,11 @@ mod tests {
     fn step_sixtyfourth_serialize_to_bytes_after_sixtyfourth() {
         let mut bytes = Vec::new();
 
-        Step {panels: Panels::UpRight, duration: Duration::SixtyFourth}.serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
+        Step {
+            panels: Panels::UpRight,
+            duration: Duration::SixtyFourth,
+        }
+        .serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
 
         assert_eq!(bytes, b"9");
     }
