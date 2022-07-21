@@ -1895,6 +1895,26 @@ mod tests {
     }
 
     #[test]
+    fn duration_eighth_try_from_generic() {
+        assert_ok_eq!(Duration::try_from(song::Duration::Eighth), Duration::Eighth);
+    }
+
+    #[test]
+    fn duration_sixteenth_try_from_generic() {
+        assert_ok_eq!(Duration::try_from(song::Duration::Sixteenth), Duration::Sixteenth);
+    }
+
+    #[test]
+    fn duration_twentyfourth_try_from_generic() {
+        assert_ok_eq!(Duration::try_from(song::Duration::TwentyFourth), Duration::TwentyFourth);
+    }
+
+    #[test]
+    fn duration_sixtyfourth_try_from_generic() {
+        assert_ok_eq!(Duration::try_from(song::Duration::SixtyFourth), Duration::SixtyFourth);
+    }
+
+    #[test]
     fn steps_ser_de_empty() {
         assert_tokens(&Steps { steps: Vec::new() }, &[Token::Bytes(b"")]);
     }
