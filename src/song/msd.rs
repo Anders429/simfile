@@ -8,7 +8,7 @@ use serde::{
 };
 use std::{cmp::Ordering, fmt, iter, mem::MaybeUninit, str};
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Error {
     UnsupportedPanelCombination,
     UnsupportedDifficulty,
@@ -1245,8 +1245,9 @@ mod tests {
     use claim::{assert_err_eq, assert_ok_eq};
     use serde::{
         de,
-        de::{Error, Unexpected},
+        de::Unexpected,
     };
+    use serde::de::Error as DeError;
     use serde_test::{assert_tokens, Token};
 
     #[test]
@@ -1406,7 +1407,7 @@ mod tests {
     #[test]
     fn panels_none_into_generic() {
         assert_eq!(
-            Into::<[song::Panel; 4]>::into(Panels::None),
+            <[song::Panel; 4]>::from(Panels::None),
             [
                 song::Panel::None,
                 song::Panel::None,
@@ -1419,7 +1420,7 @@ mod tests {
     #[test]
     fn panels_down_left_into_generic() {
         assert_eq!(
-            Into::<[song::Panel; 4]>::into(Panels::DownLeft),
+            <[song::Panel; 4]>::from(Panels::DownLeft),
             [
                 song::Panel::Step,
                 song::Panel::Step,
@@ -1432,7 +1433,7 @@ mod tests {
     #[test]
     fn panels_down_into_generic() {
         assert_eq!(
-            Into::<[song::Panel; 4]>::into(Panels::Down),
+            <[song::Panel; 4]>::from(Panels::Down),
             [
                 song::Panel::None,
                 song::Panel::Step,
@@ -1445,7 +1446,7 @@ mod tests {
     #[test]
     fn panels_down_right_into_generic() {
         assert_eq!(
-            Into::<[song::Panel; 4]>::into(Panels::DownRight),
+            <[song::Panel; 4]>::from(Panels::DownRight),
             [
                 song::Panel::None,
                 song::Panel::Step,
@@ -1458,7 +1459,7 @@ mod tests {
     #[test]
     fn panels_left_into_generic() {
         assert_eq!(
-            Into::<[song::Panel; 4]>::into(Panels::Left),
+            <[song::Panel; 4]>::from(Panels::Left),
             [
                 song::Panel::Step,
                 song::Panel::None,
@@ -1471,7 +1472,7 @@ mod tests {
     #[test]
     fn panels_right_into_generic() {
         assert_eq!(
-            Into::<[song::Panel; 4]>::into(Panels::Right),
+            <[song::Panel; 4]>::from(Panels::Right),
             [
                 song::Panel::None,
                 song::Panel::None,
@@ -1484,7 +1485,7 @@ mod tests {
     #[test]
     fn panels_up_left_into_generic() {
         assert_eq!(
-            Into::<[song::Panel; 4]>::into(Panels::UpLeft),
+            <[song::Panel; 4]>::from(Panels::UpLeft),
             [
                 song::Panel::Step,
                 song::Panel::None,
@@ -1497,7 +1498,7 @@ mod tests {
     #[test]
     fn panels_up_into_generic() {
         assert_eq!(
-            Into::<[song::Panel; 4]>::into(Panels::Up),
+            <[song::Panel; 4]>::from(Panels::Up),
             [
                 song::Panel::None,
                 song::Panel::None,
@@ -1510,7 +1511,7 @@ mod tests {
     #[test]
     fn panels_up_right_into_generic() {
         assert_eq!(
-            Into::<[song::Panel; 4]>::into(Panels::UpRight),
+            <[song::Panel; 4]>::from(Panels::UpRight),
             [
                 song::Panel::None,
                 song::Panel::None,
@@ -1523,7 +1524,7 @@ mod tests {
     #[test]
     fn panels_up_down_into_generic() {
         assert_eq!(
-            Into::<[song::Panel; 4]>::into(Panels::UpDown),
+            <[song::Panel; 4]>::from(Panels::UpDown),
             [
                 song::Panel::None,
                 song::Panel::Step,
@@ -1536,13 +1537,169 @@ mod tests {
     #[test]
     fn panels_left_right_into_generic() {
         assert_eq!(
-            Into::<[song::Panel; 4]>::into(Panels::LeftRight),
+            <[song::Panel; 4]>::from(Panels::LeftRight),
             [
                 song::Panel::Step,
                 song::Panel::None,
                 song::Panel::None,
                 song::Panel::Step
             ]
+        );
+    }
+
+    #[test]
+    fn panels_none_try_from_generic() {
+        assert_ok_eq!(
+            Panels::try_from([
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::None
+            ]),
+            Panels::None,
+        );
+    }
+
+    #[test]
+    fn panels_down_left_try_from_generic() {
+        assert_ok_eq!(
+            Panels::try_from([
+                song::Panel::Step,
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::None
+            ]),
+            Panels::DownLeft,
+        );
+    }
+
+    #[test]
+    fn panels_down_try_from_generic() {
+        assert_ok_eq!(
+            Panels::try_from([
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::None
+            ]),
+            Panels::Down,
+        );
+    }
+
+    #[test]
+    fn panels_down_right_try_from_generic() {
+        assert_ok_eq!(
+            Panels::try_from([
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::Step
+            ]),
+            Panels::DownRight,
+        );
+    }
+
+    #[test]
+    fn panels_left_try_from_generic() {
+        assert_ok_eq!(
+            Panels::try_from([
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::None
+            ]),
+            Panels::Left,
+        );
+    }
+
+    #[test]
+    fn panels_right_try_from_generic() {
+        assert_ok_eq!(
+            Panels::try_from([
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::Step
+            ]),
+            Panels::Right,
+        );
+    }
+
+    #[test]
+    fn panels_up_left_try_from_generic() {
+        assert_ok_eq!(
+            Panels::try_from([
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::None
+            ]),
+            Panels::UpLeft,
+        );
+    }
+
+    #[test]
+    fn panels_up_try_from_generic() {
+        assert_ok_eq!(
+            Panels::try_from([
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::None
+            ]),
+            Panels::Up,
+        );
+    }
+
+    #[test]
+    fn panels_up_right_try_from_generic() {
+        assert_ok_eq!(
+            Panels::try_from([
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::Step
+            ]),
+            Panels::UpRight,
+        );
+    }
+
+    #[test]
+    fn panels_up_down_try_from_generic() {
+        assert_ok_eq!(
+            Panels::try_from([
+                song::Panel::None,
+                song::Panel::Step,
+                song::Panel::Step,
+                song::Panel::None
+            ]),
+            Panels::UpDown,
+        );
+    }
+
+    #[test]
+    fn panels_left_right_try_from_generic() {
+        assert_ok_eq!(
+            Panels::try_from([
+                song::Panel::Step,
+                song::Panel::None,
+                song::Panel::None,
+                song::Panel::Step
+            ]),
+            Panels::LeftRight,
+        );
+    }
+
+    #[test]
+    fn panels_unsupported_try_from_generic() {
+        assert_err_eq!(
+            Panels::try_from([
+                song::Panel::Step,
+                song::Panel::Step,
+                song::Panel::Step,
+                song::Panel::Step
+            ]),
+            Error::UnsupportedPanelCombination,
         );
     }
 
