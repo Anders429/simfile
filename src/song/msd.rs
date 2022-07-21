@@ -1872,7 +1872,27 @@ mod tests {
     #[test]
     fn duration_compare_sixtyfourth_sixtyfourth() {
         assert_eq!(Duration::SixtyFourth, Duration::SixtyFourth);
-    }    
+    }
+
+    #[test]
+    fn duration_eighth_into_generic() {
+        assert_eq!(song::Duration::from(Duration::Eighth), song::Duration::Eighth);
+    }
+
+    #[test]
+    fn duration_sixteenth_into_generic() {
+        assert_eq!(song::Duration::from(Duration::Sixteenth), song::Duration::Sixteenth);
+    }
+
+    #[test]
+    fn duration_twentyfourth_into_generic() {
+        assert_eq!(song::Duration::from(Duration::TwentyFourth), song::Duration::TwentyFourth);
+    }
+
+    #[test]
+    fn duration_sixtyfourth_into_generic() {
+        assert_eq!(song::Duration::from(Duration::SixtyFourth), song::Duration::SixtyFourth);
+    }
 
     #[test]
     fn steps_ser_de_empty() {
