@@ -1245,6 +1245,61 @@ mod tests {
     use serde_test::{assert_tokens, Token};
 
     #[test]
+    fn panels_none_as_serialized_byte() {
+        assert_eq!(Panels::None.as_serialized_byte(), b'0');
+    }
+
+    #[test]
+    fn panels_down_left_as_serialized_byte() {
+        assert_eq!(Panels::DownLeft.as_serialized_byte(), b'1');
+    }
+
+    #[test]
+    fn panels_down_as_serialized_byte() {
+        assert_eq!(Panels::Down.as_serialized_byte(), b'2');
+    }
+
+    #[test]
+    fn panels_down_right_as_serialized_byte() {
+        assert_eq!(Panels::DownRight.as_serialized_byte(), b'3');
+    }
+
+    #[test]
+    fn panels_left_as_serialized_byte() {
+        assert_eq!(Panels::Left.as_serialized_byte(), b'4');
+    }
+
+    #[test]
+    fn panels_right_as_serialized_byte() {
+        assert_eq!(Panels::Right.as_serialized_byte(), b'6');
+    }
+
+    #[test]
+    fn panels_up_left_as_serialized_byte() {
+        assert_eq!(Panels::UpLeft.as_serialized_byte(), b'7');
+    }
+
+    #[test]
+    fn panels_up_as_serialized_byte() {
+        assert_eq!(Panels::Up.as_serialized_byte(), b'8');
+    }
+
+    #[test]
+    fn panels_up_right_as_serialized_byte() {
+        assert_eq!(Panels::UpRight.as_serialized_byte(), b'9');
+    }
+
+    #[test]
+    fn panels_up_down_as_serialized_byte() {
+        assert_eq!(Panels::UpDown.as_serialized_byte(), b'A');
+    }
+
+    #[test]
+    fn panels_left_right_as_serialized_byte() {
+        assert_eq!(Panels::LeftRight.as_serialized_byte(), b'B');
+    }
+
+    #[test]
     fn steps_ser_de_empty() {
         assert_tokens(&Steps { steps: Vec::new() }, &[Token::Bytes(b"")]);
     }
