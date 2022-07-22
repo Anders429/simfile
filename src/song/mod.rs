@@ -37,6 +37,7 @@ pub enum Duration {
     Sixteenth,
     TwentyFourth,
     SixtyFourth,
+    OneHundredNinetySecond,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -11,6 +11,7 @@ use std::{cmp::Ordering, fmt, iter, mem::MaybeUninit, str};
 #[derive(Debug, Eq, PartialEq)]
 pub enum Error {
     UnsupportedPanelCombination,
+    UnsupportedDuration,
     UnsupportedDifficulty,
 }
 
@@ -268,6 +269,7 @@ impl TryFrom<song::Duration> for Duration {
             song::Duration::Sixteenth => Ok(Duration::Sixteenth),
             song::Duration::TwentyFourth => Ok(Duration::TwentyFourth),
             song::Duration::SixtyFourth => Ok(Duration::SixtyFourth),
+            _ => Err(Error::UnsupportedDuration),
         }
     }
 }
@@ -347,15 +349,20 @@ impl Step {
             steps.push(song::Step {
                 panels: self.panels.into(),
                 duration: song::Duration::TwentyFourth,
-            })
+            });
+            length -= 8;
         } else if 3 <= length {
             steps.push(song::Step {
                 panels: self.panels.into(),
                 duration: song::Duration::SixtyFourth,
-            })
+            });
+            length -= 3;
         } else {
-            // Shouldn't ever get here.
-            unreachable!()
+            steps.push(song::Step {
+                panels: self.panels.into(),
+                duration: song::Duration::OneHundredNinetySecond,
+            });
+            length -= 1;
         }
 
         // Fill rest of space.
@@ -376,15 +383,20 @@ impl Step {
                 steps.push(song::Step {
                     panels: Panels::None.into(),
                     duration: song::Duration::TwentyFourth,
-                })
+                });
+                length -= 8;
             } else if 3 <= length {
                 steps.push(song::Step {
                     panels: Panels::None.into(),
                     duration: song::Duration::SixtyFourth,
-                })
+                });
+                length -= 3;
             } else {
-                // Shouldn't ever get here.
-                unreachable!()
+                steps.push(song::Step {
+                    panels: Panels::None.into(),
+                    duration: song::Duration::OneHundredNinetySecond,
+                });
+                length -= 1;
             }
         }
         steps
@@ -740,6 +752,10 @@ impl TryFrom<song::Steps<8>> for (Steps, Steps) {
         let mut right_steps = Vec::new();
 
         for step in steps.steps {
+            // TODO: Implement more clever separation of charts to avoid 192nds that may crop up.
+            // Some 192nds will appear in valid .msd files, possibly due to hemiolas between one
+            // side and the other (interestingly, hemiolas of this nature are only possible in
+            // doubles and couples charts in .msd, not in single charts).
             let left_panels;
             let right_panels;
             let panels_ptr = step.panels.as_ptr() as *const [song::Panel; 4];
@@ -1990,6 +2006,14 @@ mod tests {
     }
 
     #[test]
+    fn duration_unsupported_try_from_generic() {
+        assert_err_eq!(
+            Duration::try_from(song::Duration::OneHundredNinetySecond),
+            Error::UnsupportedDuration,
+        );
+    }
+
+    #[test]
     fn step_eighth_serialize_to_bytes() {
         let mut bytes = Vec::new();
 
@@ -2247,6 +2271,142 @@ mod tests {
         .serialize_to_bytes(&mut bytes, Some(Duration::SixtyFourth));
 
         assert_eq!(bytes, b"9");
+    }
+
+    #[test]
+    fn step_into_steps_for_length_eighth_in_eighth() {
+        assert_eq!(Step {
+            panels: Panels::DownLeft,
+            duration: Duration::Eighth,
+        }.into_steps_for_length(24), vec![song::Step {
+            panels: Panels::DownLeft.into(),
+            duration: Duration::Eighth.into(),
+        }]);
+    }
+
+    #[test]
+    fn step_into_steps_for_length_sixteenth_in_sixteenth() {
+        assert_eq!(Step {
+            panels: Panels::DownLeft,
+            duration: Duration::Sixteenth,
+        }.into_steps_for_length(12), vec![song::Step {
+            panels: Panels::DownLeft.into(),
+            duration: Duration::Sixteenth.into(),
+        }]);
+    }
+
+    #[test]
+    fn step_into_steps_for_length_twentyfourth_in_twentyfourth() {
+        assert_eq!(Step {
+            panels: Panels::DownLeft,
+            duration: Duration::TwentyFourth,
+        }.into_steps_for_length(8), vec![song::Step {
+            panels: Panels::DownLeft.into(),
+            duration: Duration::TwentyFourth.into(),
+        }]);
+    }
+
+    #[test]
+    fn step_into_steps_for_length_sixtyfourth_in_sixtyfourth() {
+        assert_eq!(Step {
+            panels: Panels::DownLeft,
+            duration: Duration::SixtyFourth,
+        }.into_steps_for_length(3), vec![song::Step {
+            panels: Panels::DownLeft.into(),
+            duration: Duration::SixtyFourth.into(),
+        }]);
+    }
+
+    #[test]
+    fn step_into_steps_for_length_eighth_in_sixteenth() {
+        assert_eq!(Step {
+            panels: Panels::DownLeft,
+            duration: Duration::Eighth,
+        }.into_steps_for_length(12), vec![song::Step {
+            panels: Panels::DownLeft.into(),
+            duration: Duration::Sixteenth.into(),
+        }]);
+    }
+
+    #[test]
+    fn step_into_steps_for_length_eighth_in_twentyfourth() {
+        assert_eq!(Step {
+            panels: Panels::DownLeft,
+            duration: Duration::Eighth,
+        }.into_steps_for_length(8), vec![song::Step {
+            panels: Panels::DownLeft.into(),
+            duration: Duration::TwentyFourth.into(),
+        }]);
+    }
+
+    #[test]
+    fn step_into_steps_for_length_eighth_in_sixtyfourth() {
+        assert_eq!(Step {
+            panels: Panels::DownLeft,
+            duration: Duration::Eighth,
+        }.into_steps_for_length(3), vec![song::Step {
+            panels: Panels::DownLeft.into(),
+            duration: Duration::SixtyFourth.into(),
+        }]);
+    }
+
+    #[test]
+    fn step_into_steps_for_length_eighth_in_onehundredninetysecond() {
+        assert_eq!(Step {
+            panels: Panels::DownLeft,
+            duration: Duration::Eighth,
+        }.into_steps_for_length(1), vec![song::Step {
+            panels: Panels::DownLeft.into(),
+            duration: song::Duration::OneHundredNinetySecond,
+        }]);
+    }
+
+    #[test]
+    fn step_into_steps_for_length_eighth_in_quarter() {
+        assert_eq!(Step {
+            panels: Panels::DownLeft,
+            duration: Duration::Eighth,
+        }.into_steps_for_length(48), vec![song::Step {
+            panels: Panels::DownLeft.into(),
+            duration: Duration::Eighth.into(),
+        }, song::Step {
+            panels: Panels::None.into(),
+            duration: Duration::Eighth.into(),
+        }]);
+    }
+
+    #[test]
+    fn step_into_steps_for_length_sixteenth_in_mixed() {
+        assert_eq!(Step {
+            panels: Panels::DownLeft,
+            duration: Duration::Eighth,
+        }.into_steps_for_length(23), vec![song::Step {
+            panels: Panels::DownLeft.into(),
+            duration: Duration::Sixteenth.into(),
+        }, song::Step {
+            panels: Panels::None.into(),
+            duration: Duration::TwentyFourth.into(),
+        }, song::Step {
+            panels: Panels::None.into(),
+            duration: Duration::SixtyFourth.into(),
+        }]);
+    }
+
+    #[test]
+    fn step_into_steps_for_length_twentyfourth_in_two() {
+        assert_eq!(Step {
+            panels: Panels::DownLeft,
+            duration: Duration::TwentyFourth,
+        }.into_steps_for_length(16), vec![song::Step {
+            panels: Panels::DownLeft.into(),
+            duration: Duration::Sixteenth.into(),
+        }, song::Step {
+            panels: Panels::None.into(),
+            duration: Duration::SixtyFourth.into(),
+        }, song::Step {
+            panels: Panels::None.into(),
+            duration: song::Duration::OneHundredNinetySecond,
+        }]);
     }
 
     #[test]
