@@ -508,7 +508,7 @@ impl<'de> Deserialize<'de> for Steps {
                         b']' => {
                             if !matches!(duration, Duration::TwentyFourth) {
                                 return Err(de::Error::invalid_value(
-                                    Unexpected::Other("mismatched `)`"),
+                                    Unexpected::Other("mismatched `]`"),
                                     &match duration {
                                         Duration::Eighth => "`0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
                                         Duration::Sixteenth => "`)`",
@@ -523,7 +523,7 @@ impl<'de> Deserialize<'de> for Steps {
                         b'}' => {
                             if !matches!(duration, Duration::SixtyFourth) {
                                 return Err(de::Error::invalid_value(
-                                    Unexpected::Other("mismatched `)`"),
+                                    Unexpected::Other("mismatched `}`"),
                                     &match duration {
                                         Duration::Eighth => "`0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
                                         Duration::Sixteenth => "`)`",
@@ -1262,7 +1262,7 @@ mod tests {
     use more_asserts::assert_gt;
     use serde::de::Error as DeError;
     use serde::{de, de::Unexpected};
-    use serde_test::{assert_tokens, Token};
+    use serde_test::{assert_de_tokens_error, assert_tokens, Token};
 
     #[test]
     fn panels_none_as_serialized_byte() {
@@ -2925,6 +2925,102 @@ mod tests {
                 ],
             },
             &[Token::Bytes(b"8(B)[0]{3}")],
+        );
+    }
+
+    #[test]
+    fn steps_de_nested_sixteenths() {
+        assert_de_tokens_error::<Steps>(
+            &[Token::Bytes(b"(12(34))")],
+            "invalid value: incorrectly nested `(`, expected `0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+        );
+    }
+
+    #[test]
+    fn steps_de_nested_twentyfourths() {
+        assert_de_tokens_error::<Steps>(
+            &[Token::Bytes(b"[12[34]]")],
+            "invalid value: incorrectly nested `[`, expected `0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+        );
+    }
+
+    #[test]
+    fn steps_de_nested_sixtyfourths() {
+        assert_de_tokens_error::<Steps>(
+            &[Token::Bytes(b"{12{34}}")],
+            "invalid value: incorrectly nested `{`, expected `0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+        );
+    }
+
+    #[test]
+    fn steps_de_unopened_parenthesis() {
+        assert_de_tokens_error::<Steps>(
+            &[Token::Bytes(b"12)34")],
+            "invalid value: mismatched `)`, expected `0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+        );
+    }
+
+    #[test]
+    fn steps_de_unopened_bracket() {
+        assert_de_tokens_error::<Steps>(
+            &[Token::Bytes(b"12]34")],
+            "invalid value: mismatched `]`, expected `0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+        );
+    }
+
+    #[test]
+    fn steps_de_unopened_brace() {
+        assert_de_tokens_error::<Steps>(
+            &[Token::Bytes(b"12}34")],
+            "invalid value: mismatched `}`, expected `0`, `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`, `A`, or `B`",
+        );
+    }
+
+    #[test]
+    fn steps_de_mismatched_parenthesis_with_bracket() {
+        assert_de_tokens_error::<Steps>(
+            &[Token::Bytes(b"1[23)4")],
+            "invalid value: mismatched `)`, expected `]`",
+        );
+    }
+
+    #[test]
+    fn steps_de_mismatched_parenthesis_with_brace() {
+        assert_de_tokens_error::<Steps>(
+            &[Token::Bytes(b"1{23)4")],
+            "invalid value: mismatched `)`, expected `}`",
+        );
+    }
+
+    #[test]
+    fn steps_de_mismatched_bracket_with_parenthesis() {
+        assert_de_tokens_error::<Steps>(
+            &[Token::Bytes(b"1(23]4")],
+            "invalid value: mismatched `]`, expected `)`",
+        );
+    }
+
+    #[test]
+    fn steps_de_mismatched_bracket_with_brace() {
+        assert_de_tokens_error::<Steps>(
+            &[Token::Bytes(b"1{23]4")],
+            "invalid value: mismatched `]`, expected `}`",
+        );
+    }
+
+    #[test]
+    fn steps_de_mismatched_brace_with_parenthesis() {
+        assert_de_tokens_error::<Steps>(
+            &[Token::Bytes(b"1(23}4")],
+            "invalid value: mismatched `}`, expected `)`",
+        );
+    }
+
+    #[test]
+    fn steps_de_mismatched_brace_with_bracket() {
+        assert_de_tokens_error::<Steps>(
+            &[Token::Bytes(b"1[23}4")],
+            "invalid value: mismatched `}`, expected `]`",
         );
     }
 
