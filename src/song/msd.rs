@@ -2442,6 +2442,438 @@ mod tests {
     }
 
     #[test]
+    fn steps_ser_de_sixteenths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::Sixteenth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"(8B03)")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_twentyfourths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::TwentyFourth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"[8B03]")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_sixtyfourths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::SixtyFourth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::SixtyFourth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::SixtyFourth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::SixtyFourth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"{8B03}")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_eighths_and_sixteenths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::Sixteenth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"8B(03)")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_eighths_and_twentyfourths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::TwentyFourth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"8B[03]")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_eighths_and_sixtyfourths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::SixtyFourth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::SixtyFourth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"8B{03}")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_sixteenths_and_eighths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::Eighth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"(8B)03")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_sixteenths_and_twentyfourths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::TwentyFourth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"(8B)[03]")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_sixteenths_and_sixtyfourths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::SixtyFourth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::SixtyFourth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"(8B){03}")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_twentyfourths_and_eighths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::Eighth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"[8B]03")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_twentyfourths_and_sixteenths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::Sixteenth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"[8B](03)")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_twentyfourths_and_sixtyfourths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::SixtyFourth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::SixtyFourth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"[8B]{03}")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_sixtyfourths_and_eighths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::SixtyFourth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::SixtyFourth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::Eighth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"{8B}03")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_sixtyfourths_and_sixteenths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::SixtyFourth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::SixtyFourth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::Sixteenth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"{8B}(03)")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_sixtyfourths_and_twentyfourths() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::SixtyFourth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::SixtyFourth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::TwentyFourth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"{8B}[03]")],
+        );
+    }
+
+    #[test]
+    fn steps_ser_de_all_durations() {
+        assert_tokens(
+            &Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::SixtyFourth,
+                    },
+                ],
+            },
+            &[Token::Bytes(b"8(B)[0]{3}")],
+        );
+    }
+
+    #[test]
     fn difficulty_ser_de_basic() {
         assert_tokens(
             &Difficulty::Basic,
