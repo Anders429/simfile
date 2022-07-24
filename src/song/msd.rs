@@ -3199,6 +3199,241 @@ mod tests {
     }
 
     #[test]
+    fn double_steps_into_generic_steps() {
+        assert_eq!(
+            song::Steps::from((Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::SixtyFourth,
+                    },
+                ],
+            }, Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Down,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::UpDown,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::Left,
+                        duration: Duration::SixtyFourth,
+                    },
+                ],
+            }),),
+            song::Steps {
+                steps: vec![
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Eighth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::Step,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::TwentyFourth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::SixtyFourth,
+                    },
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn double_steps_into_generic_steps_unsynced() {
+        let steps_0 = Steps {
+            steps: vec![
+                Step {
+                    panels: Panels::Up,
+                    duration: Duration::Eighth,
+                },
+                Step {
+                    panels: Panels::Down,
+                    duration: Duration::Sixteenth,
+                },
+                Step {
+                    panels: Panels::Right,
+                    duration: Duration::Eighth,
+                },
+                Step {
+                    panels: Panels::Left,
+                    duration: Duration::Sixteenth,
+                },
+            ],
+        };
+        let steps_1 = Steps {
+            steps: vec![
+                Step {
+                    panels: Panels::Up,
+                    duration: Duration::Sixteenth,
+                },
+                Step {
+                    panels: Panels::Down,
+                    duration: Duration::Sixteenth,
+                },
+                Step {
+                    panels: Panels::Right,
+                    duration: Duration::Eighth,
+                },
+                Step {
+                    panels: Panels::UpDown,
+                    duration: Duration::Sixteenth,
+                },
+                Step {
+                    panels: Panels::Left,
+                    duration: Duration::Sixteenth,
+                },
+            ],
+        };
+
+        assert_eq!(
+            song::Steps::from((steps_0, steps_1)),
+            song::Steps {
+                steps: vec![
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::Step,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                ],
+            }
+        );
+    }
+
+    #[test]
     fn double_steps_try_from_generic_steps() {
         assert_ok_eq!(
             <(Steps, Steps)>::try_from(song::Steps {
@@ -3665,139 +3900,5 @@ mod tests {
                 Token::StructEnd,
             ],
         )
-    }
-
-    #[test]
-    fn double_steps_into_generic_steps() {
-        let steps_0 = Steps {
-            steps: vec![
-                Step {
-                    panels: Panels::Up,
-                    duration: Duration::Eighth,
-                },
-                Step {
-                    panels: Panels::Down,
-                    duration: Duration::Sixteenth,
-                },
-                Step {
-                    panels: Panels::Right,
-                    duration: Duration::Eighth,
-                },
-                Step {
-                    panels: Panels::Left,
-                    duration: Duration::Sixteenth,
-                },
-            ],
-        };
-        let steps_1 = Steps {
-            steps: vec![
-                Step {
-                    panels: Panels::Up,
-                    duration: Duration::Sixteenth,
-                },
-                Step {
-                    panels: Panels::Down,
-                    duration: Duration::Sixteenth,
-                },
-                Step {
-                    panels: Panels::Right,
-                    duration: Duration::Eighth,
-                },
-                Step {
-                    panels: Panels::UpDown,
-                    duration: Duration::Sixteenth,
-                },
-                Step {
-                    panels: Panels::Left,
-                    duration: Duration::Sixteenth,
-                },
-            ],
-        };
-
-        assert_eq!(
-            song::Steps::from((steps_0, steps_1)),
-            song::Steps {
-                steps: vec![
-                    song::Step {
-                        panels: [
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::Step,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::Step,
-                            song::Panel::None,
-                        ],
-                        duration: song::Duration::Sixteenth,
-                    },
-                    song::Step {
-                        panels: [
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::Step,
-                            song::Panel::None,
-                            song::Panel::None,
-                        ],
-                        duration: song::Duration::Sixteenth,
-                    },
-                    song::Step {
-                        panels: [
-                            song::Panel::None,
-                            song::Panel::Step,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::Step,
-                        ],
-                        duration: song::Duration::Sixteenth,
-                    },
-                    song::Step {
-                        panels: [
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::Step,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                        ],
-                        duration: song::Duration::Sixteenth,
-                    },
-                    song::Step {
-                        panels: [
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::Step,
-                            song::Panel::Step,
-                            song::Panel::None,
-                        ],
-                        duration: song::Duration::Sixteenth,
-                    },
-                    song::Step {
-                        panels: [
-                            song::Panel::Step,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::Step,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::None,
-                        ],
-                        duration: song::Duration::Sixteenth,
-                    },
-                ],
-            }
-        );
     }
 }
