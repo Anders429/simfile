@@ -1,7 +1,15 @@
 [package]
 name = "simfile"
 version = "0.1.0"
+authors = ["Anders Evensen"]
 edition = "2021"
+rust-version = "1.58.0"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/Anders429/simfile"
+description = "Reading, writing, manipulating, and converting simfiles."
+categories = ["data-structures", "encoding", "game-development", "parser-implementations"]
+keywords = ["stepmania", "simfile", "stepfile", "rhythm", "simulator"]
 
 [dependencies]
 ctrl-z = "0.1.0"
