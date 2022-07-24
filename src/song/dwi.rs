@@ -50,6 +50,18 @@ enum Duration {
     OneHundredNinetySecond,
 }
 
+impl From<Duration> for song::Duration {
+    fn from(duration: Duration) -> Self {
+        match duration {
+            Duration::Eighth => song::Duration::Eighth,
+            Duration::Sixteenth => song::Duration::Sixteenth,
+            Duration::TwentyFourth => song::Duration::TwentyFourth,
+            Duration::SixtyFourth => song::Duration::SixtyFourth,
+            Duration::OneHundredNinetySecond => song::Duration::OneHundredNinetySecond,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -93,5 +105,45 @@ mod tests {
     #[test]
     fn panel_try_from_generic_panel_hold_end() {
         assert_ok_eq!(Panel::try_from(song::Panel::HoldEnd), Panel::HoldEnd);
+    }
+
+    #[test]
+    fn duration_into_generic_duration_eighth() {
+        assert_eq!(
+            song::Duration::from(Duration::Eighth),
+            song::Duration::Eighth
+        );
+    }
+
+    #[test]
+    fn duration_into_generic_duration_sixteenth() {
+        assert_eq!(
+            song::Duration::from(Duration::Sixteenth),
+            song::Duration::Sixteenth
+        );
+    }
+
+    #[test]
+    fn duration_into_generic_duration_twentyfourth() {
+        assert_eq!(
+            song::Duration::from(Duration::TwentyFourth),
+            song::Duration::TwentyFourth
+        );
+    }
+
+    #[test]
+    fn duration_into_generic_duration_sixtyfourth() {
+        assert_eq!(
+            song::Duration::from(Duration::SixtyFourth),
+            song::Duration::SixtyFourth
+        );
+    }
+
+    #[test]
+    fn duration_into_generic_duration_one_hundred_ninety_second() {
+        assert_eq!(
+            song::Duration::from(Duration::OneHundredNinetySecond),
+            song::Duration::OneHundredNinetySecond
+        );
     }
 }
