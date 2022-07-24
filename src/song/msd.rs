@@ -3160,18 +3160,15 @@ mod tests {
     fn steps_try_from_generic_steps_unsupported_panel_combination() {
         assert_err_eq!(
             Steps::try_from(song::Steps {
-                steps: vec![
-                    song::Step {
-                        panels: [
-                            song::Panel::Step,
-                            song::Panel::None,
-                            song::Panel::Step,
-                            song::Panel::Step,
-                        ],
-                        duration: song::Duration::Eighth,
-                    },
-                    
-                ],
+                steps: vec![song::Step {
+                    panels: [
+                        song::Panel::Step,
+                        song::Panel::None,
+                        song::Panel::Step,
+                        song::Panel::Step,
+                    ],
+                    duration: song::Duration::Eighth,
+                },],
             }),
             Error::UnsupportedPanelCombination,
         );
@@ -3181,18 +3178,15 @@ mod tests {
     fn steps_try_from_generic_steps_unsupported_duration() {
         assert_err_eq!(
             Steps::try_from(song::Steps {
-                steps: vec![
-                    song::Step {
-                        panels: [
-                            song::Panel::Step,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::Step,
-                        ],
-                        duration: song::Duration::OneHundredNinetySecond,
-                    },
-                    
-                ],
+                steps: vec![song::Step {
+                    panels: [
+                        song::Panel::Step,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::Step,
+                    ],
+                    duration: song::Duration::OneHundredNinetySecond,
+                },],
             }),
             Error::UnsupportedDuration,
         );
@@ -3201,45 +3195,48 @@ mod tests {
     #[test]
     fn double_steps_into_generic_steps() {
         assert_eq!(
-            song::Steps::from((Steps {
-                steps: vec![
-                    Step {
-                        panels: Panels::Up,
-                        duration: Duration::Eighth,
-                    },
-                    Step {
-                        panels: Panels::LeftRight,
-                        duration: Duration::Sixteenth,
-                    },
-                    Step {
-                        panels: Panels::None,
-                        duration: Duration::TwentyFourth,
-                    },
-                    Step {
-                        panels: Panels::DownRight,
-                        duration: Duration::SixtyFourth,
-                    },
-                ],
-            }, Steps {
-                steps: vec![
-                    Step {
-                        panels: Panels::Down,
-                        duration: Duration::Eighth,
-                    },
-                    Step {
-                        panels: Panels::None,
-                        duration: Duration::Sixteenth,
-                    },
-                    Step {
-                        panels: Panels::UpDown,
-                        duration: Duration::TwentyFourth,
-                    },
-                    Step {
-                        panels: Panels::Left,
-                        duration: Duration::SixtyFourth,
-                    },
-                ],
-            }),),
+            song::Steps::from((
+                Steps {
+                    steps: vec![
+                        Step {
+                            panels: Panels::Up,
+                            duration: Duration::Eighth,
+                        },
+                        Step {
+                            panels: Panels::LeftRight,
+                            duration: Duration::Sixteenth,
+                        },
+                        Step {
+                            panels: Panels::None,
+                            duration: Duration::TwentyFourth,
+                        },
+                        Step {
+                            panels: Panels::DownRight,
+                            duration: Duration::SixtyFourth,
+                        },
+                    ],
+                },
+                Steps {
+                    steps: vec![
+                        Step {
+                            panels: Panels::Down,
+                            duration: Duration::Eighth,
+                        },
+                        Step {
+                            panels: Panels::None,
+                            duration: Duration::Sixteenth,
+                        },
+                        Step {
+                            panels: Panels::UpDown,
+                            duration: Duration::TwentyFourth,
+                        },
+                        Step {
+                            panels: Panels::Left,
+                            duration: Duration::SixtyFourth,
+                        },
+                    ],
+                }
+            ),),
             song::Steps {
                 steps: vec![
                     song::Step {
@@ -3492,45 +3489,48 @@ mod tests {
                     },
                 ],
             }),
-            (Steps {
-                steps: vec![
-                    Step {
-                        panels: Panels::Up,
-                        duration: Duration::Eighth,
-                    },
-                    Step {
-                        panels: Panels::LeftRight,
-                        duration: Duration::Sixteenth,
-                    },
-                    Step {
-                        panels: Panels::None,
-                        duration: Duration::TwentyFourth,
-                    },
-                    Step {
-                        panels: Panels::DownRight,
-                        duration: Duration::SixtyFourth,
-                    },
-                ],
-            }, Steps {
-                steps: vec![
-                    Step {
-                        panels: Panels::Down,
-                        duration: Duration::Eighth,
-                    },
-                    Step {
-                        panels: Panels::None,
-                        duration: Duration::Sixteenth,
-                    },
-                    Step {
-                        panels: Panels::UpDown,
-                        duration: Duration::TwentyFourth,
-                    },
-                    Step {
-                        panels: Panels::Left,
-                        duration: Duration::SixtyFourth,
-                    },
-                ],
-            }),
+            (
+                Steps {
+                    steps: vec![
+                        Step {
+                            panels: Panels::Up,
+                            duration: Duration::Eighth,
+                        },
+                        Step {
+                            panels: Panels::LeftRight,
+                            duration: Duration::Sixteenth,
+                        },
+                        Step {
+                            panels: Panels::None,
+                            duration: Duration::TwentyFourth,
+                        },
+                        Step {
+                            panels: Panels::DownRight,
+                            duration: Duration::SixtyFourth,
+                        },
+                    ],
+                },
+                Steps {
+                    steps: vec![
+                        Step {
+                            panels: Panels::Down,
+                            duration: Duration::Eighth,
+                        },
+                        Step {
+                            panels: Panels::None,
+                            duration: Duration::Sixteenth,
+                        },
+                        Step {
+                            panels: Panels::UpDown,
+                            duration: Duration::TwentyFourth,
+                        },
+                        Step {
+                            panels: Panels::Left,
+                            duration: Duration::SixtyFourth,
+                        },
+                    ],
+                }
+            ),
         );
     }
 
@@ -3538,21 +3538,19 @@ mod tests {
     fn double_steps_try_from_generic_steps_unsupported_panel_combination() {
         assert_err_eq!(
             <(Steps, Steps)>::try_from(song::Steps {
-                steps: vec![
-                    song::Step {
-                        panels: [
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::Step,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::Step,
-                            song::Panel::Step,
-                            song::Panel::Step,
-                        ],
-                        duration: song::Duration::Eighth,
-                    },
-                ],
+                steps: vec![song::Step {
+                    panels: [
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::Step,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::Step,
+                        song::Panel::Step,
+                        song::Panel::Step,
+                    ],
+                    duration: song::Duration::Eighth,
+                },],
             }),
             Error::UnsupportedPanelCombination
         );
@@ -3562,21 +3560,19 @@ mod tests {
     fn double_steps_try_from_generic_steps_unsupported_duration() {
         assert_err_eq!(
             <(Steps, Steps)>::try_from(song::Steps {
-                steps: vec![
-                    song::Step {
-                        panels: [
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::Step,
-                            song::Panel::None,
-                            song::Panel::None,
-                            song::Panel::Step,
-                            song::Panel::None,
-                            song::Panel::Step,
-                        ],
-                        duration: song::Duration::OneHundredNinetySecond,
-                    },
-                ],
+                steps: vec![song::Step {
+                    panels: [
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::Step,
+                        song::Panel::None,
+                        song::Panel::None,
+                        song::Panel::Step,
+                        song::Panel::None,
+                        song::Panel::Step,
+                    ],
+                    duration: song::Duration::OneHundredNinetySecond,
+                },],
             }),
             Error::UnsupportedDuration
         );
