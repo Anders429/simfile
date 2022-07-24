@@ -5,10 +5,12 @@
 
 use crate::song;
 
+#[derive(Debug)]
 enum ConversionError {
 }
 
 /// Valid states for an individual panel to be in.
+#[derive(Debug, PartialEq)]
 enum Panel {
     None,
     Step,
