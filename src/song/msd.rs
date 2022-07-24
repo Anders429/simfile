@@ -3025,6 +3025,72 @@ mod tests {
     }
 
     #[test]
+    fn steps_into_generic_steps() {
+        assert_eq!(
+            song::Steps::from(Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::SixtyFourth,
+                    },
+                ],
+            }),
+            song::Steps {
+                steps: vec![
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Eighth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::TwentyFourth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::Step,
+                        ],
+                        duration: song::Duration::SixtyFourth,
+                    },
+                ],
+            }
+        );
+    }
+
+    #[test]
     fn difficulty_ser_de_basic() {
         assert_tokens(
             &Difficulty::Basic,
