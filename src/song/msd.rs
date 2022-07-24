@@ -3623,6 +3623,30 @@ mod tests {
     }
 
     #[test]
+    fn difficulty_into_generic_difficulty_basic() {
+        assert_eq!(
+            song::Difficulty::from(Difficulty::Basic),
+            song::Difficulty::Easy
+        );
+    }
+
+    #[test]
+    fn difficulty_into_generic_difficulty_another() {
+        assert_eq!(
+            song::Difficulty::from(Difficulty::Another),
+            song::Difficulty::Medium
+        );
+    }
+
+    #[test]
+    fn difficulty_into_generic_difficulty_maniac() {
+        assert_eq!(
+            song::Difficulty::from(Difficulty::Maniac),
+            song::Difficulty::Hard
+        );
+    }
+
+    #[test]
     fn song_ser_de_full() {
         assert_tokens(
             &Song {
