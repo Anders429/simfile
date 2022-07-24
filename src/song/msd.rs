@@ -3647,6 +3647,26 @@ mod tests {
     }
 
     #[test]
+    fn difficulty_try_from_generic_difficulty_basic() {
+        assert_ok_eq!(Difficulty::try_from(song::Difficulty::Easy), Difficulty::Basic);
+    }
+
+    #[test]
+    fn difficulty_try_from_generic_difficulty_another() {
+        assert_ok_eq!(Difficulty::try_from(song::Difficulty::Medium), Difficulty::Another);
+    }
+
+    #[test]
+    fn difficulty_try_from_generic_difficulty_maniac() {
+        assert_ok_eq!(Difficulty::try_from(song::Difficulty::Hard), Difficulty::Maniac);
+    }
+
+    #[test]
+    fn difficulty_try_from_generic_difficulty_unsupported() {
+        assert_err_eq!(Difficulty::try_from(song::Difficulty::Beginner), Error::UnsupportedDifficulty);
+    }
+
+    #[test]
     fn song_ser_de_full() {
         assert_tokens(
             &Song {
