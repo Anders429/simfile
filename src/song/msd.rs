@@ -9,10 +9,10 @@ use serde::{
 use std::{cmp::Ordering, fmt, iter, mem::MaybeUninit, str};
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Error {
-    UnsupportedPanelCombination,
-    UnsupportedDuration,
-    UnsupportedDifficulty,
+pub enum ConversionError {
+    PanelCombination,
+    Duration,
+    Difficulty,
 }
 
 /// All valid panel combinations, according to the MSD specification.
@@ -141,7 +141,7 @@ impl From<Panels> for [song::Panel; 4] {
 }
 
 impl TryFrom<[song::Panel; 4]> for Panels {
-    type Error = Error;
+    type Error = ConversionError;
 
     fn try_from(panels: [song::Panel; 4]) -> Result<Self, Self::Error> {
         match panels {
@@ -178,7 +178,7 @@ impl TryFrom<[song::Panel; 4]> for Panels {
             [song::Panel::None, song::Panel::None, song::Panel::Step, song::Panel::Step] => {
                 Ok(Panels::UpRight)
             }
-            _ => Err(Error::UnsupportedPanelCombination),
+            _ => Err(ConversionError::PanelCombination),
         }
     }
 }
@@ -261,7 +261,7 @@ impl From<Duration> for song::Duration {
 }
 
 impl TryFrom<song::Duration> for Duration {
-    type Error = Error;
+    type Error = ConversionError;
 
     fn try_from(duration: song::Duration) -> Result<Self, Self::Error> {
         match duration {
@@ -269,7 +269,7 @@ impl TryFrom<song::Duration> for Duration {
             song::Duration::Sixteenth => Ok(Duration::Sixteenth),
             song::Duration::TwentyFourth => Ok(Duration::TwentyFourth),
             song::Duration::SixtyFourth => Ok(Duration::SixtyFourth),
-            _ => Err(Error::UnsupportedDuration),
+            _ => Err(ConversionError::Duration),
         }
     }
 }
@@ -566,7 +566,7 @@ impl From<Steps> for song::Steps<4> {
 }
 
 impl TryFrom<song::Steps<4>> for Steps {
-    type Error = Error;
+    type Error = ConversionError;
 
     fn try_from(song_steps: song::Steps<4>) -> Result<Self, Self::Error> {
         let mut steps = Vec::new();
@@ -745,7 +745,7 @@ impl From<(Steps, Steps)> for song::Steps<8> {
 }
 
 impl TryFrom<song::Steps<8>> for (Steps, Steps) {
-    type Error = Error;
+    type Error = ConversionError;
 
     fn try_from(steps: song::Steps<8>) -> Result<Self, Self::Error> {
         let mut left_steps = Vec::new();
@@ -891,14 +891,14 @@ impl From<Difficulty> for song::Difficulty {
 }
 
 impl TryFrom<song::Difficulty> for Difficulty {
-    type Error = Error;
+    type Error = ConversionError;
 
     fn try_from(difficulty: song::Difficulty) -> Result<Self, Self::Error> {
         match difficulty {
             song::Difficulty::Easy => Ok(Self::Basic),
             song::Difficulty::Medium => Ok(Self::Another),
             song::Difficulty::Hard => Ok(Self::Maniac),
-            _ => Err(Error::UnsupportedDifficulty),
+            _ => Err(ConversionError::Difficulty),
         }
     }
 }
@@ -1195,7 +1195,7 @@ impl From<Song> for song::Song {
 }
 
 impl TryFrom<song::Song> for Song {
-    type Error = Error;
+    type Error = ConversionError;
 
     fn try_from(song: song::Song) -> Result<Self, Self::Error> {
         let mut single = Vec::new();
@@ -1713,7 +1713,7 @@ mod tests {
                 song::Panel::Step,
                 song::Panel::Step
             ]),
-            Error::UnsupportedPanelCombination,
+            ConversionError::PanelCombination,
         );
     }
 
@@ -2009,7 +2009,7 @@ mod tests {
     fn duration_unsupported_try_from_generic() {
         assert_err_eq!(
             Duration::try_from(song::Duration::OneHundredNinetySecond),
-            Error::UnsupportedDuration,
+            ConversionError::Duration,
         );
     }
 
@@ -3170,7 +3170,7 @@ mod tests {
                     duration: song::Duration::Eighth,
                 },],
             }),
-            Error::UnsupportedPanelCombination,
+            ConversionError::PanelCombination,
         );
     }
 
@@ -3188,7 +3188,7 @@ mod tests {
                     duration: song::Duration::OneHundredNinetySecond,
                 },],
             }),
-            Error::UnsupportedDuration,
+            ConversionError::Duration,
         );
     }
 
@@ -3552,7 +3552,7 @@ mod tests {
                     duration: song::Duration::Eighth,
                 },],
             }),
-            Error::UnsupportedPanelCombination
+            ConversionError::PanelCombination
         );
     }
 
@@ -3574,7 +3574,7 @@ mod tests {
                     duration: song::Duration::OneHundredNinetySecond,
                 },],
             }),
-            Error::UnsupportedDuration
+            ConversionError::Duration
         );
     }
 
@@ -3663,7 +3663,7 @@ mod tests {
 
     #[test]
     fn difficulty_try_from_generic_difficulty_unsupported() {
-        assert_err_eq!(Difficulty::try_from(song::Difficulty::Beginner), Error::UnsupportedDifficulty);
+        assert_err_eq!(Difficulty::try_from(song::Difficulty::Beginner), ConversionError::Difficulty);
     }
 
     #[test]

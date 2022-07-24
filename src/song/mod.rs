@@ -22,7 +22,7 @@ pub enum Error {
     Serialization(::msd::ser::Error),
     Deserialization(::msd::de::Error),
 
-    ToMsd(msd::Error),
+    ToMsd(msd::ConversionError),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
