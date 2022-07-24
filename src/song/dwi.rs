@@ -5,6 +5,9 @@
 
 use crate::song;
 
+enum ConversionError {
+}
+
 /// Valid states for an individual panel to be in.
 enum Panel {
     None,
@@ -24,9 +27,23 @@ impl From<Panel> for song::Panel {
     }
 }
 
+impl TryFrom<song::Panel> for Panel {
+    type Error = ConversionError;
+
+    fn try_from(panel: song::Panel) -> Result<Self, Self::Error> {
+        match panel {
+            song::Panel::None => Ok(Self::None),
+            song::Panel::Step => Ok(Self::Step),
+            song::Panel::HoldStart => Ok(Self::HoldStart),
+            song::Panel::HoldEnd => Ok(Self::HoldEnd),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use claim::assert_ok_eq;
 
     #[test]
     fn panel_into_generic_panel_none() {
@@ -46,5 +63,25 @@ mod tests {
     #[test]
     fn panel_into_generic_panel_hold_end() {
         assert_eq!(song::Panel::from(Panel::HoldEnd), song::Panel::HoldEnd);
+    }
+
+    #[test]
+    fn panel_try_from_generic_panel_none() {
+        assert_ok_eq!(Panel::try_from(song::Panel::None), Panel::None);
+    }
+
+    #[test]
+    fn panel_try_from_generic_panel_step() {
+        assert_ok_eq!(Panel::try_from(song::Panel::Step), Panel::Step);
+    }
+
+    #[test]
+    fn panel_try_from_generic_panel_hold_start() {
+        assert_ok_eq!(Panel::try_from(song::Panel::HoldStart), Panel::HoldStart);
+    }
+
+    #[test]
+    fn panel_try_from_generic_panel_hold_end() {
+        assert_ok_eq!(Panel::try_from(song::Panel::HoldEnd), Panel::HoldEnd);
     }
 }
