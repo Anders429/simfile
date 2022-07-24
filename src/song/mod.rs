@@ -29,6 +29,8 @@ pub enum Error {
 pub enum Panel {
     None,
     Step,
+    HoldStart,
+    HoldEnd,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
