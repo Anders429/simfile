@@ -3199,6 +3199,155 @@ mod tests {
     }
 
     #[test]
+    fn double_steps_try_from_generic_steps() {
+        assert_ok_eq!(
+            <(Steps, Steps)>::try_from(song::Steps {
+                steps: vec![
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Eighth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::Sixteenth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::Step,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::TwentyFourth,
+                    },
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::None,
+                        ],
+                        duration: song::Duration::SixtyFourth,
+                    },
+                ],
+            }),
+            (Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Up,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::LeftRight,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::DownRight,
+                        duration: Duration::SixtyFourth,
+                    },
+                ],
+            }, Steps {
+                steps: vec![
+                    Step {
+                        panels: Panels::Down,
+                        duration: Duration::Eighth,
+                    },
+                    Step {
+                        panels: Panels::None,
+                        duration: Duration::Sixteenth,
+                    },
+                    Step {
+                        panels: Panels::UpDown,
+                        duration: Duration::TwentyFourth,
+                    },
+                    Step {
+                        panels: Panels::Left,
+                        duration: Duration::SixtyFourth,
+                    },
+                ],
+            }),
+        );
+    }
+
+    #[test]
+    fn double_steps_try_from_generic_steps_unsupported_panel_combination() {
+        assert_err_eq!(
+            <(Steps, Steps)>::try_from(song::Steps {
+                steps: vec![
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::Step,
+                            song::Panel::Step,
+                        ],
+                        duration: song::Duration::Eighth,
+                    },
+                ],
+            }),
+            Error::UnsupportedPanelCombination
+        );
+    }
+
+    #[test]
+    fn double_steps_try_from_generic_steps_unsupported_duration() {
+        assert_err_eq!(
+            <(Steps, Steps)>::try_from(song::Steps {
+                steps: vec![
+                    song::Step {
+                        panels: [
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::None,
+                            song::Panel::Step,
+                            song::Panel::None,
+                            song::Panel::Step,
+                        ],
+                        duration: song::Duration::OneHundredNinetySecond,
+                    },
+                ],
+            }),
+            Error::UnsupportedDuration
+        );
+    }
+
+    #[test]
     fn difficulty_ser_de_basic() {
         assert_tokens(
             &Difficulty::Basic,
