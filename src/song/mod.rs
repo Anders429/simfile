@@ -1,97 +1,130 @@
-//! Uniform representation of song simfiles.
+//! Generic representation of a song.
 //!
-//! This module provides a [`Song`] type for uniformly representing a song simfile. This allows for
-//! reading, manipulating, and writing simfiles between formats interchangeably.
+//! This module contains all generic types necessary to represent a song simfile regardless of that
+//! simfile's original format. This allows for simfiles to be universally read and edited, as well
+//! as enabling easy transcoding between simfile formats.
 
-mod interpret;
+mod msd;
+mod util;
 
-use crate::parse;
-use std::{error::Error, fs, path::Path};
+use ctrl_z::ReadToCtrlZ;
+use std::{
+    fs::File,
+    io,
+    io::{BufReader, BufWriter},
+    path::Path,
+};
 
-/// Situations in which a song is selectable.
-///
-/// Not all of these options are supported in every simfile format. The `Roulette`, `ExtraStage`,
-/// `OneMoreExtraStage`, and `OnRemainingStages` variants seem to originate from Stepmania 3.9+, an
-/// old unofficial fork of Stepmania 3.9. However, they are *technically* supported in Stepmania 5,
-/// within both the `sm` and `ssc` file formats, to the extent that the values are simply
-/// interpreted as `Always`. For data preservation reasons, they are included here.
-#[derive(Debug, PartialEq)]
-pub enum Selectable {
-    /// Selectable.
-    Always,
-    /// Not selectable.
-    Never,
-    /// Can only be selected by roulette.
-    Roulette,
-    /// Can only be selected on an extra stage.
-    ExtraStage,
-    /// Can only be selected on a second extra stage.
-    OneMoreExtraStage,
-    /// Can only be selected when there are the provided number of stages remaining.
-    ///
-    /// # Example
-    /// To make a song selectable only on the final stage, use a value of `1`:
-    ///
-    /// ```
-    /// use simfile::song::Selectable;
-    ///
-    /// let final_stage = Selectable::OnRemainingStages(1);
-    /// ```
-    OnRemainingStages(u8),
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum Error {
+    Io(io::Error),
+    Serialization(::msd::ser::Error),
+    Deserialization(::msd::de::Error),
+
+    ToMsd(msd::ConversionError),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Panel {
+    None,
+    Step,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Duration {
+    Eighth,
+    Sixteenth,
+    TwentyFourth,
+    SixtyFourth,
+    OneHundredNinetySecond,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Step<const PANELS: usize> {
+    panels: [Panel; PANELS],
+    /// Duration after this step until the next step.
+    duration: Duration,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Steps<const PANELS: usize> {
+    steps: Vec<Step<PANELS>>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Style {
+    Single(Steps<4>),
+    Double(Steps<8>),
+    Couple(Steps<8>),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Difficulty {
+    Beginner,
+    Easy,
+    Medium,
+    Hard,
+    Challenge,
+    Edit,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Chart {
+    difficulty: Difficulty,
+    meter: u8,
+    /// Contains style and steps for that style.
+    style: Style,
 }
 
 /// A song simfile.
 ///
-/// This struct strives to be a universal representation of a song simfile.
-#[derive(Debug, Default, PartialEq)]
+/// `Song`s can be read from and written to any supported song simfile format.
+#[derive(Clone, Debug, PartialEq)]
 pub struct Song {
-    /// The song's primary title.
-    pub title: Option<String>,
-    /// The song's subtitle.
-    pub subtitle: Option<String>,
-    /// The song's artist.
-    pub artist: Option<String>,
+    title: Option<String>,
+    subtitle: Option<String>,
+    artist: Option<String>,
+    credit: Option<String>,
 
-    /// Selectability during song selection.
-    pub selectable: Option<Selectable>,
+    bpm: Option<f64>,
+    offset: Option<i64>,
+
+    background_file: Option<String>,
+    music_file: Option<String>,
+    music_preview_file: Option<String>,
+
+    charts: Vec<Chart>,
 }
 
 impl Song {
-    /// Creates an empty `Song`.
+    /// Read a `.msd` formatted song simfile.
     ///
-    /// # Example
-    /// ```
-    /// use simfile::Song;
-    ///
-    /// let mut song = Song::new();
-    ///
-    /// // Begin assigning values to the `Song`.
-    /// song.title = Some("foo".to_owned());
-    /// song.artist = Some("bar".to_owned());
-    /// // etc. ...
-    /// ```
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Read a `Song` from a `.msd` file.
-    ///
-    /// The file must be encoded as valid UTF-8.
-    ///
-    /// # Example
-    /// ``` no_run
-    /// use simfile::Song;
-    /// use std::error::Error;
-    ///
-    /// fn main() -> Result<(), Box<dyn Error>> {
-    ///     let song = Song::from_msd("foo.msd")?;
-    ///     Ok(())
-    /// }
-    /// ```
-    pub fn from_msd<P>(path: P) -> Result<Self, Box<dyn Error>>
+    /// Specifically, this function will read the simfile using the `MSD 2.0` specification.
+    pub fn read_msd<P>(path: P) -> Result<Self, Error>
     where
         P: AsRef<Path>,
     {
-        Ok(interpret::msd::interpret(parse::msd::parse(&fs::read_to_string(path)?)).unwrap())
+        ::msd::from_reader::<_, msd::Song>(BufReader::new(ReadToCtrlZ::new(
+            File::open(path).map_err(Error::Io)?,
+        )))
+        .map_err(Error::Deserialization)
+        .map(|song| song.into())
+    }
+
+    /// Write this song simfile to a `.msd` formatted file.
+    ///
+    /// This method will fail if the song simfile contains elements that cannot be properly encoded
+    /// in a `.msd` file. Specifically, this method will attempt to encode the simfile using the
+    /// `MSD 2.0` specification.
+    pub fn write_msd<P>(self, path: P) -> Result<(), Error>
+    where
+        P: AsRef<Path>,
+    {
+        ::msd::to_writer::<_, msd::Song>(
+            BufWriter::new(File::create(path).map_err(Error::Io)?),
+            &self.try_into().map_err(Error::ToMsd)?,
+        )
+        .map_err(Error::Serialization)
     }
 }
