@@ -3613,10 +3613,13 @@ mod tests {
 
     #[test]
     fn difficulty_de_invalid() {
-        assert_de_tokens_error::<Difficulty>(&[Token::UnitVariant {
-            name: "Difficulty",
-            variant: "INVALID",
-        }], "unknown variant `INVALID`, expected one of `BASIC`, `ANOTHER`, `MANIAC`");
+        assert_de_tokens_error::<Difficulty>(
+            &[Token::UnitVariant {
+                name: "Difficulty",
+                variant: "INVALID",
+            }],
+            "unknown variant `INVALID`, expected one of `BASIC`, `ANOTHER`, `MANIAC`",
+        );
     }
 
     #[test]
