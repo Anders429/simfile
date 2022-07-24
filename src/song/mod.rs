@@ -77,6 +77,9 @@ pub struct Chart {
     style: Style,
 }
 
+/// A song simfile.
+/// 
+/// `Song`s can be read from and written to any supported song simfile format.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Song {
     title: Option<String>,
