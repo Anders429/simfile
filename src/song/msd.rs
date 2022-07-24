@@ -3612,6 +3612,14 @@ mod tests {
     }
 
     #[test]
+    fn difficulty_de_invalid() {
+        assert_de_tokens_error::<Difficulty>(&[Token::UnitVariant {
+            name: "Difficulty",
+            variant: "INVALID",
+        }], "unknown variant `INVALID`, expected one of `BASIC`, `ANOTHER`, `MANIAC`");
+    }
+
+    #[test]
     fn song_ser_de_full() {
         assert_tokens(
             &Song {
