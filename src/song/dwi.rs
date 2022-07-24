@@ -40,6 +40,15 @@ impl TryFrom<song::Panel> for Panel {
     }
 }
 
+/// All valid DWI durations between steps.
+enum Duration {
+    Eighth,
+    Sixteenth,
+    TwentyFourth,
+    SixtyFourth,
+    OneHundredNinetySecond,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
