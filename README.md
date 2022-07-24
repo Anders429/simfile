@@ -4,6 +4,7 @@
 [![codecov.io](https://img.shields.io/codecov/c/gh/Anders429/simfile)](https://codecov.io/gh/Anders429/simfile)
 [![crates.io](https://img.shields.io/crates/v/simfile)](https://crates.io/crates/simfile)
 [![docs.rs](https://docs.rs/simfile/badge.svg)](https://docs.rs/simfile)
+[![MSRV](https://img.shields.io/badge/rustc-1.58.0+-yellow.svg)](#minimum-supported-rust-version)
 [![License](https://img.shields.io/crates/l/simfile)](#license)
 
 Reading, writing, manipulating, and converting simfiles.
@@ -36,6 +37,9 @@ song.write_msd("simfile.msd").expect("error while writing `.msd` file");
 
 Note that both `Song::read_msd()` and `Song::write_msd()` return `Result` types that must be
 handled appropriately.
+
+## Minimum Supported Rust Version
+This crate is guaranteed to compile on stable `rustc 1.58.0` and up.
 
 ## License
 This project is licensed under either of
