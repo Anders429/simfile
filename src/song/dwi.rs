@@ -85,6 +85,11 @@ struct Step<const PANELS: usize> {
     duration: Duration,
 }
 
+/// All steps and other timing info for a single chart.
+struct Chart<const PANELS: usize> {
+    steps: Vec<Step<PANELS>>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
