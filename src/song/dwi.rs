@@ -77,6 +77,14 @@ impl TryFrom<song::Duration> for Duration {
     }
 }
 
+/// A single step.
+/// 
+/// A step contains both the panel information as well as the duration until the next step.
+struct Step<const PANELS: usize> {
+    panels: [Panel; PANELS],
+    duration: Duration,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
