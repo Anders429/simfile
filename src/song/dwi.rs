@@ -85,9 +85,15 @@ struct Step<const PANELS: usize> {
     duration: Duration,
 }
 
+enum Steps {
+    Single(Vec<Step<4>>),
+    Double((Vec<Step<4>>, Vec<Step<4>>)),
+    Solo(Vec<Step<6>>),
+}
+
 /// All steps and other timing info for a single chart.
-struct Chart<const PANELS: usize> {
-    steps: Vec<Step<PANELS>>,
+struct Chart {
+    steps: Steps,
 }
 
 #[cfg(test)]
