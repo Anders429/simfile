@@ -42,6 +42,7 @@ impl TryFrom<song::Panel> for Panel {
 }
 
 /// All valid DWI durations between steps.
+#[derive(Debug, PartialEq)]
 enum Duration {
     Eighth,
     Sixteenth,
@@ -53,11 +54,25 @@ enum Duration {
 impl From<Duration> for song::Duration {
     fn from(duration: Duration) -> Self {
         match duration {
-            Duration::Eighth => song::Duration::Eighth,
-            Duration::Sixteenth => song::Duration::Sixteenth,
-            Duration::TwentyFourth => song::Duration::TwentyFourth,
-            Duration::SixtyFourth => song::Duration::SixtyFourth,
-            Duration::OneHundredNinetySecond => song::Duration::OneHundredNinetySecond,
+            Duration::Eighth => Self::Eighth,
+            Duration::Sixteenth => Self::Sixteenth,
+            Duration::TwentyFourth => Self::TwentyFourth,
+            Duration::SixtyFourth => Self::SixtyFourth,
+            Duration::OneHundredNinetySecond => Self::OneHundredNinetySecond,
+        }
+    }
+}
+
+impl TryFrom<song::Duration> for Duration {
+    type Error = ConversionError;
+
+    fn try_from(duration: song::Duration) -> Result<Self, Self::Error> {
+        match duration {
+            song::Duration::Eighth => Ok(Self::Eighth),
+            song::Duration::Sixteenth => Ok(Self::Sixteenth),
+            song::Duration::TwentyFourth => Ok(Self::TwentyFourth),
+            song::Duration::SixtyFourth => Ok(Self::SixtyFourth),
+            song::Duration::OneHundredNinetySecond => Ok(Self::OneHundredNinetySecond),
         }
     }
 }
@@ -144,6 +159,43 @@ mod tests {
         assert_eq!(
             song::Duration::from(Duration::OneHundredNinetySecond),
             song::Duration::OneHundredNinetySecond
+        );
+    }
+
+    #[test]
+    fn duration_try_from_generic_duration_eighth() {
+        assert_ok_eq!(Duration::try_from(song::Duration::Eighth), Duration::Eighth);
+    }
+
+    #[test]
+    fn duration_try_from_generic_duration_sixteenth() {
+        assert_ok_eq!(
+            Duration::try_from(song::Duration::Sixteenth),
+            Duration::Sixteenth
+        );
+    }
+
+    #[test]
+    fn duration_try_from_generic_duration_twentyfourth() {
+        assert_ok_eq!(
+            Duration::try_from(song::Duration::TwentyFourth),
+            Duration::TwentyFourth
+        );
+    }
+
+    #[test]
+    fn duration_try_from_generic_duration_sixtyfourth() {
+        assert_ok_eq!(
+            Duration::try_from(song::Duration::SixtyFourth),
+            Duration::SixtyFourth
+        );
+    }
+
+    #[test]
+    fn duration_try_from_generic_duration_one_hundred_ninety_second() {
+        assert_ok_eq!(
+            Duration::try_from(song::Duration::OneHundredNinetySecond),
+            Duration::OneHundredNinetySecond
         );
     }
 }
