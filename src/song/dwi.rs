@@ -57,7 +57,7 @@ impl TryFrom<song::Panel> for Panel {
 }
 
 /// A combination of panel states.
-/// 
+///
 /// The generic const `PANELS` defines the game mode, and the correct number of panels will be
 /// stored for each respective game mode.
 #[derive(Debug, PartialEq)]
@@ -67,12 +67,12 @@ struct Panels<const PANELS: usize> {
 
 impl Panels<4> {
     /// Encodes this set of panels as an array of serialized bytes.
-    /// 
+    ///
     /// This value will be a maximum of 9 bytes (for the case of a group of steps with a group of
     /// holds). However, it may be much less for common cases, with 1 byte being the smallest.
-    /// 
+    ///
     /// Note that the grouping here is done by trivially deciding the byte combinations to
-    /// represent step groups. This means that groups will likely not be preserved when doing a 
+    /// represent step groups. This means that groups will likely not be preserved when doing a
     /// round-trip deserializing and re-serializing.
     fn as_serialized_bytes(&self) -> ArrayVec<u8, 9> {
         macro_rules! new_single_byte {
@@ -220,7 +220,7 @@ impl Panels<4> {
     }
 
     /// Deserializes the given byte as a step, respecting and updating the current holds.
-    /// 
+    ///
     /// If a hold exists on a panel, then the hold is removed and a `HoldEnd` is placed in that
     /// panel. Otherwise, a `Step` is used.
     fn step_from_serialized_byte<E>(byte: u8, holds: &mut [bool; 4]) -> Result<Self, E>
@@ -228,7 +228,7 @@ impl Panels<4> {
         E: de::Error,
     {
         /// Define a new step at the given index.
-        /// 
+        ///
         /// # Safety
         /// `index` must be a valid index into `holds`.
         unsafe fn create_step(index: usize, holds: &mut [bool; 4]) -> Panel {
@@ -310,7 +310,7 @@ impl Panels<4> {
     }
 
     // Deserializes the given byte as a hold, respecting and updating the current holds.
-    /// 
+    ///
     /// A `Hold` is placed on each panel specified by `byte`, and `holds` is also updated to
     /// reflect the new hold.
     fn hold_from_serialized_byte<E>(byte: u8, holds: &mut [bool; 4]) -> Result<Self, E>
@@ -318,7 +318,7 @@ impl Panels<4> {
         E: de::Error,
     {
         /// Define a new hold at the given index.
-        /// 
+        ///
         /// # Safety
         /// `index` must be a valid index into `holds`.
         unsafe fn create_hold(index: usize, holds: &mut [bool; 4]) -> Panel {
@@ -2100,7 +2100,7 @@ mod tests {
     fn dance_steps_de_mismatched_sixteenths_with_twentyfourths() {
         assert_de_tokens_error::<Steps<4>>(
             &[Token::Bytes(b"[)")],
-            "invalid value: mismatched `)`, expected `]`"
+            "invalid value: mismatched `)`, expected `]`",
         );
     }
 
@@ -2108,7 +2108,7 @@ mod tests {
     fn dance_steps_de_mismatched_sixteenths_with_sixtyfourths() {
         assert_de_tokens_error::<Steps<4>>(
             &[Token::Bytes(b"{)")],
-            "invalid value: mismatched `)`, expected `}`"
+            "invalid value: mismatched `)`, expected `}`",
         );
     }
 
@@ -2116,7 +2116,7 @@ mod tests {
     fn dance_steps_de_mismatched_sixteenths_with_one_hundred_ninety_seconds() {
         assert_de_tokens_error::<Steps<4>>(
             &[Token::Bytes(b"`)")],
-            "invalid value: mismatched `)`, expected `'`"
+            "invalid value: mismatched `)`, expected `'`",
         );
     }
 
@@ -2132,7 +2132,7 @@ mod tests {
     fn dance_steps_de_mismatched_twentyfourths_with_sixteenths() {
         assert_de_tokens_error::<Steps<4>>(
             &[Token::Bytes(b"(]")],
-            "invalid value: mismatched `]`, expected `)`"
+            "invalid value: mismatched `]`, expected `)`",
         );
     }
 
@@ -2140,7 +2140,7 @@ mod tests {
     fn dance_steps_de_mismatched_twentyfourths_with_sixtyfourths() {
         assert_de_tokens_error::<Steps<4>>(
             &[Token::Bytes(b"{]")],
-            "invalid value: mismatched `]`, expected `}`"
+            "invalid value: mismatched `]`, expected `}`",
         );
     }
 
@@ -2148,7 +2148,7 @@ mod tests {
     fn dance_steps_de_mismatched_twentyfourths_with_one_hundred_ninety_seconds() {
         assert_de_tokens_error::<Steps<4>>(
             &[Token::Bytes(b"`]")],
-            "invalid value: mismatched `]`, expected `'`"
+            "invalid value: mismatched `]`, expected `'`",
         );
     }
 
@@ -2164,7 +2164,7 @@ mod tests {
     fn dance_steps_de_mismatched_sixtyfourths_with_sixteenths() {
         assert_de_tokens_error::<Steps<4>>(
             &[Token::Bytes(b"(}")],
-            "invalid value: mismatched `}`, expected `)`"
+            "invalid value: mismatched `}`, expected `)`",
         );
     }
 
@@ -2172,7 +2172,7 @@ mod tests {
     fn dance_steps_de_mismatched_sixtyfourths_with_twentyfourths() {
         assert_de_tokens_error::<Steps<4>>(
             &[Token::Bytes(b"[}")],
-            "invalid value: mismatched `}`, expected `]`"
+            "invalid value: mismatched `}`, expected `]`",
         );
     }
 
@@ -2180,7 +2180,7 @@ mod tests {
     fn dance_steps_de_mismatched_sixtyfourths_with_one_hundred_ninety_seconds() {
         assert_de_tokens_error::<Steps<4>>(
             &[Token::Bytes(b"`}")],
-            "invalid value: mismatched `}`, expected `'`"
+            "invalid value: mismatched `}`, expected `'`",
         );
     }
 
@@ -2196,7 +2196,7 @@ mod tests {
     fn dance_steps_de_mismatched_one_hundred_ninety_seconds_with_sixteenths() {
         assert_de_tokens_error::<Steps<4>>(
             &[Token::Bytes(b"('")],
-            "invalid value: mismatched `'`, expected `)`"
+            "invalid value: mismatched `'`, expected `)`",
         );
     }
 
@@ -2204,7 +2204,7 @@ mod tests {
     fn dance_steps_de_mismatched_one_hundred_ninety_seconds_with_twentyfourths() {
         assert_de_tokens_error::<Steps<4>>(
             &[Token::Bytes(b"['")],
-            "invalid value: mismatched `'`, expected `]`"
+            "invalid value: mismatched `'`, expected `]`",
         );
     }
 
@@ -2212,7 +2212,7 @@ mod tests {
     fn dance_steps_de_mismatched_one_hundred_ninety_seconds_with_sixtyfourths() {
         assert_de_tokens_error::<Steps<4>>(
             &[Token::Bytes(b"{'")],
-            "invalid value: mismatched `'`, expected `}`"
+            "invalid value: mismatched `'`, expected `}`",
         );
     }
 }
