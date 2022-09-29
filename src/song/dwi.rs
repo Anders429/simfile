@@ -16,7 +16,7 @@ use std::fmt;
 enum ConversionError {}
 
 /// Valid states for an individual panel to be in.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Panel {
     /// No state.
     None,
@@ -60,7 +60,7 @@ impl TryFrom<song::Panel> for Panel {
 ///
 /// The generic const `PANELS` defines the game mode, and the correct number of panels will be
 /// stored for each respective game mode.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 struct Panels<const PANELS: usize> {
     panels: [Panel; PANELS],
 }
@@ -405,9 +405,9 @@ impl Panels<4> {
             // SAFETY: `index` will always be less than 4, and therefore within the bounds of
             // `other.panels`.
             let panel = unsafe { self.panels.get_unchecked_mut(index) };
-            match unsafe { other.panels.get_unchecked(index) } {
-                &other_panel @ (Panel::Step | Panel::HoldEnd) => *panel = other_panel,
-                &other_panel @ Panel::HoldStart => {
+            match *unsafe { other.panels.get_unchecked(index) } {
+                other_panel @ (Panel::Step | Panel::HoldEnd) => *panel = other_panel,
+                other_panel @ Panel::HoldStart => {
                     if matches!(panel, Panel::HoldEnd) {
                         return Err(de::Error::invalid_value(
                             Unexpected::Other("`HoldStart` on same beat as `HoldEnd`"),
