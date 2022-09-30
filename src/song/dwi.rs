@@ -10,7 +10,7 @@ use serde::{
     de::{Unexpected, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use std::fmt;
+use std::{collections::HashMap, fmt, ops::Range, time};
 
 #[derive(Debug)]
 enum ConversionError {}
@@ -861,6 +861,117 @@ impl<'de> Deserialize<'de> for Steps<4> {
 
         deserializer.deserialize_bytes(StepsVisitor)
     }
+}
+
+enum DisplayStringPart {
+    String(String),
+    /// Path to an image that should be inserted in the display string.
+    Image(String),
+}
+
+struct DisplayString {
+    parts: Vec<DisplayStringPart>,
+}
+
+enum DisplayBpm {
+    Random,
+    Set(f64),
+    Range(Range<f64>),
+}
+
+struct Beat {
+    // Calculate by taking the fraction and, multiplying by 3.
+    // Whole number is essentially the number of 1/12 notes.
+    // Fraction is the number of 1/192 notes within that 1/12 note (so 1/16th of a 1/12th note).
+    // Also keep in mind that the original value is in terms of measures I think, so they're not
+    // 1/4th notes.
+    whole: u64,
+    fraction: u8,
+}
+
+enum SampleStart {
+    WithGap(time::Duration),
+    WithoutGap(time::Duration),
+}
+
+enum Status {
+    New,
+    Normal,
+}
+
+enum Type {
+    File(String),
+    Movie(String),
+    Vis(String),
+    Off,
+}
+
+struct Effect {
+    r#type: Option<Type>,
+    layer: u8,
+    start_at: f64,
+    mult: (u8, u8, u8),
+    animate: Vec<f64>,
+    r#move: Option<(f64, f64)>,
+    spacing: Option<(f64, f64)>,
+    size: Option<u64>,
+    keep_pos: bool,
+    keep_time: bool,
+}
+
+struct Background {
+    effects: HashMap<u8, Effect>,
+    // `u8` is a key into `effects`.
+    script: Vec<Option<u8>>,
+}
+
+pub(in crate::song) struct Song {
+    title: Option<String>,
+    artist: Option<String>,
+
+    gap: Option<i64>,
+    bpm: Option<f64>,
+
+    display_title: Option<DisplayString>,
+    display_artist: Option<DisplayString>,
+    display_bpm: Option<DisplayBpm>,
+
+    file: Option<String>,
+    md5: Option<[u8; 16]>,
+
+    freeze: Vec<(Beat, f64)>,
+    change_bpm: Vec<(Beat, f64)>,
+
+    status: Option<Status>,
+    genre: Vec<String>,
+    cd_title: Option<String>,
+
+    sample_start: Option<SampleStart>,
+    sample_length: Option<time::Duration>,
+
+    rand_seed: Option<u32>,
+    rand_start: Option<Beat>,
+    rand_folder: Option<String>,
+    rand_list: Vec<String>,
+
+    single_basic: Option<(u8, Steps<4>)>,
+    single_another: Option<(u8, Steps<4>)>,
+    single_maniac: Option<(u8, Steps<4>)>,
+    single_s_maniac: Option<(u8, Steps<4>)>,
+    double_basic: Option<(u8, Steps<8>)>,
+    double_another: Option<(u8, Steps<8>)>,
+    double_maniac: Option<(u8, Steps<8>)>,
+    double_s_maniac: Option<(u8, Steps<8>)>,
+    couple_basic: Option<(u8, Steps<8>)>,
+    couple_another: Option<(u8, Steps<8>)>,
+    couple_maniac: Option<(u8, Steps<8>)>,
+    couple_s_maniac: Option<(u8, Steps<8>)>,
+    solo_basic: Option<(u8, Steps<6>)>,
+    solo_another: Option<(u8, Steps<6>)>,
+    solo_maniac: Option<(u8, Steps<6>)>,
+    solo_s_maniac: Option<(u8, Steps<6>)>,
+
+    background: Option<Background>,
 }
 
 #[cfg(test)]
