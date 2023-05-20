@@ -1265,7 +1265,7 @@ impl Serialize for Song {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use claim::assert_ok_eq;
+    use claims::assert_ok_eq;
     use serde_test::{
         assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens, Token,
     };

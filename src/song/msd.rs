@@ -1258,7 +1258,7 @@ impl TryFrom<song::Song> for Song {
 mod tests {
     use super::*;
     use crate::song;
-    use claim::{assert_err_eq, assert_ok_eq};
+    use claims::{assert_err_eq, assert_ok_eq};
     use more_asserts::assert_gt;
     use serde::de::Error as DeError;
     use serde::{de, de::Unexpected};
