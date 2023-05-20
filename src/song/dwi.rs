@@ -8,9 +8,10 @@ use arrayvec::ArrayVec;
 use serde::{
     de,
     de::{Unexpected, Visitor},
+    ser::{SerializeMap, SerializeStruct},
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use std::{collections::HashMap, fmt, ops::Range, time};
+use std::{collections::HashMap, fmt, fmt::Display, ops::Range, time};
 
 #[derive(Debug)]
 enum ConversionError {}
@@ -869,8 +870,37 @@ enum DisplayStringPart {
     Image(String),
 }
 
+impl Display for DisplayStringPart {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::String(string) => formatter.write_str(string),
+            Self::Image(image) => {
+                write!(formatter, "{{ {} }}", image)
+            }
+        }
+    }
+}
+
 struct DisplayString {
     parts: Vec<DisplayStringPart>,
+}
+
+impl Display for DisplayString {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for part in &self.parts {
+            part.fmt(formatter)?;
+        }
+        Ok(())
+    }
+}
+
+impl Serialize for DisplayString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_str(self)
+    }
 }
 
 enum DisplayBpm {
@@ -879,14 +909,63 @@ enum DisplayBpm {
     Range(Range<f64>),
 }
 
+impl Serialize for DisplayBpm {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Random => serializer.serialize_str("*"),
+            Self::Set(value) => serializer.serialize_f64(*value),
+            Self::Range(range) => {
+                serializer.serialize_str(&format!("{}..{}", range.start, range.end))
+            }
+        }
+    }
+}
+
+struct KeyValue<Key, Value> {
+    key: Key,
+    value: Value,
+}
+
+impl<Key, Value> Serialize for KeyValue<Key, Value>
+where
+    Key: Display,
+    Value: Display,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("{}={}", self.key, self.value))
+    }
+}
+
 struct Beat {
-    // Calculate by taking the fraction and, multiplying by 3.
+    // Calculate by taking the fraction and multiplying by 3.
     // Whole number is essentially the number of 1/12 notes.
     // Fraction is the number of 1/192 notes within that 1/12 note (so 1/16th of a 1/12th note).
     // Also keep in mind that the original value is in terms of measures I think, so they're not
     // 1/4th notes.
     whole: u64,
+    /// The fraction should be a value between 0 and 15.
     fraction: u8,
+}
+
+impl Display for Beat {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}{}", self.whole, self.fraction / 16)
+    }
+}
+
+impl Serialize for Beat {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_str(self)
+    }
 }
 
 enum SampleStart {
@@ -894,9 +973,41 @@ enum SampleStart {
     WithoutGap(time::Duration),
 }
 
+impl Serialize for SampleStart {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::WithGap(duration) => {
+                serializer.serialize_str(&format!("+{}", duration.as_millis()))
+            }
+            Self::WithoutGap(duration) => serializer.serialize_u128(duration.as_millis()),
+        }
+    }
+}
+
 enum Status {
     New,
     Normal,
+}
+
+impl Default for Status {
+    fn default() -> Self {
+        Self::Normal
+    }
+}
+
+impl Serialize for Status {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::New => serializer.serialize_unit_variant("Status", 0, "NEW"),
+            Self::Normal => serializer.serialize_unit_variant("Status", 0, "NORMAL"),
+        }
+    }
 }
 
 enum Type {
@@ -906,12 +1017,23 @@ enum Type {
     Off,
 }
 
+impl Display for Type {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::File(file) => write!(formatter, "FILE:{}", file),
+            Self::Movie(file) => write!(formatter, "MOVIE:{}", file),
+            Self::Vis(file) => write!(formatter, "VIS:{}", file),
+            Self::Off => formatter.write_str("OFF"),
+        }
+    }
+}
+
 struct Effect {
-    r#type: Option<Type>,
+    r#type: Type,
     layer: u8,
-    start_at: f64,
-    mult: (u8, u8, u8),
-    animate: Vec<f64>,
+    start_at: Option<f64>,
+    mult: Option<(u8, u8, u8)>,
+    animate: Option<(u64, Vec<u64>)>,
     r#move: Option<(f64, f64)>,
     spacing: Option<(f64, f64)>,
     size: Option<u64>,
@@ -919,12 +1041,91 @@ struct Effect {
     keep_time: bool,
 }
 
-struct Background {
-    effects: HashMap<u8, Effect>,
-    // `u8` is a key into `effects`.
-    script: Vec<Option<u8>>,
+impl Display for Effect {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{} {}", self.r#type, self.layer)?;
+        if let Some(start_at) = self.start_at {
+            write!(formatter, " STARTAT:{}", start_at)?;
+        }
+        if let Some((r, g, b)) = self.mult {
+            write!(formatter, " MULT:{},{},{}", r, g, b)?;
+        }
+        if let Some((num, frames)) = &self.animate {
+            write!(
+                formatter,
+                " ANIMATE:{},{}",
+                num,
+                frames
+                    .iter()
+                    .map(|frame| frame.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            )?;
+        }
+        if let Some((x, y)) = self.r#move {
+            write!(formatter, " MOVE:{},{}", x, y)?;
+        }
+        if let Some((x, y)) = self.spacing {
+            write!(formatter, " SPACING:{},{}", x, y)?;
+        }
+        if let Some(s) = self.size {
+            write!(formatter, " SIZE:{}", s)?;
+        }
+        if self.keep_pos {
+            formatter.write_str(" KEEPPOS")?;
+        }
+        if self.keep_time {
+            formatter.write_str(" KEEPTIME")?;
+        }
+        Ok(())
+    }
 }
 
+impl Serialize for Effect {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
+
+struct Background {
+    effects: HashMap<char, Effect>,
+    // `char` is a key into `effects`.
+    script: Vec<Option<char>>,
+}
+
+impl Serialize for Background {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut map = serializer.serialize_map(Some(self.effects.len() + 1))?;
+
+        for (label, effect) in &self.effects {
+            map.serialize_entry(label, effect)?;
+        }
+        map.serialize_entry(
+            "SCRIPT",
+            &self
+                .script
+                .iter()
+                .map(|label| match label {
+                    Some(label) => *label,
+                    None => '.',
+                })
+                .collect::<String>(),
+        )?;
+
+        map.end()
+    }
+}
+
+/// A song according to the `.dwi` specification.
+///
+/// This is the actual structure contained in the `.dwi` file. `.dwi` files can be read into or
+/// written from this data structure.
 pub(in crate::song) struct Song {
     title: Option<String>,
     artist: Option<String>,
@@ -939,10 +1140,10 @@ pub(in crate::song) struct Song {
     file: Option<String>,
     md5: Option<[u8; 16]>,
 
-    freeze: Vec<(Beat, f64)>,
-    change_bpm: Vec<(Beat, f64)>,
+    freeze: Vec<KeyValue<Beat, f64>>,
+    change_bpm: Vec<KeyValue<Beat, f64>>,
 
-    status: Option<Status>,
+    status: Status,
     genre: Vec<String>,
     cd_title: Option<String>,
 
@@ -972,6 +1173,93 @@ pub(in crate::song) struct Song {
     solo_s_maniac: Option<(u8, Steps<6>)>,
 
     background: Option<Background>,
+}
+
+impl Serialize for Song {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut serialize_struct = serializer.serialize_struct("Song", 25)?;
+        serialize_struct.serialize_field("TITLE", &self.title)?;
+        serialize_struct.serialize_field("ARTIST", &self.artist)?;
+        serialize_struct.serialize_field("GAP", &self.gap)?;
+        serialize_struct.serialize_field("BPM", &self.bpm)?;
+        serialize_struct.serialize_field("DISPLAYTITLE", &self.display_title)?;
+        serialize_struct.serialize_field("DISPLAYARTIST", &self.display_artist)?;
+        serialize_struct.serialize_field("DISPLAYBPM", &self.display_bpm)?;
+        serialize_struct.serialize_field("FILE", &self.file)?;
+        serialize_struct.serialize_field("MD5", &self.md5)?;
+        serialize_struct.serialize_field("FREEZE", &self.freeze)?;
+        serialize_struct.serialize_field("CHANGEBPM", &self.change_bpm)?;
+        serialize_struct.serialize_field("STATUS", &self.status)?;
+        serialize_struct.serialize_field("GENRE", &self.genre)?;
+        serialize_struct.serialize_field("CDTITLE", &self.cd_title)?;
+        serialize_struct.serialize_field("SAMPLESTART", &self.sample_start)?;
+        serialize_struct.serialize_field("SAMPLELENGTH", &self.sample_length)?;
+        serialize_struct.serialize_field("RANDSEED", &self.rand_seed)?;
+        serialize_struct.serialize_field("RANDSTART", &self.rand_start)?;
+        serialize_struct.serialize_field("RANDFOLDER", &self.rand_folder)?;
+        serialize_struct.serialize_field("RANDLIST", &self.rand_list)?;
+        serialize_struct.serialize_field("DISPLAYTITLE", &self.display_title)?;
+
+        if let Some((difficulty, steps)) = &self.single_basic {
+            serialize_struct.serialize_field("SINGLE", &("BASIC", difficulty, steps))?;
+        }
+        if let Some((difficulty, steps)) = &self.single_another {
+            serialize_struct.serialize_field("SINGLE", &("ANOTHER", difficulty, steps))?;
+        }
+        if let Some((difficulty, steps)) = &self.single_maniac {
+            serialize_struct.serialize_field("SINGLE", &("MANIAC", difficulty, steps))?;
+        }
+        if let Some((difficulty, steps)) = &self.single_s_maniac {
+            serialize_struct.serialize_field("SINGLE", &("SMANIAC", difficulty, steps))?;
+        }
+
+        // if let Some((difficulty, steps)) = &self.double_basic {
+        //     serialize_struct.serialize_field("DOUBLE", &("BASIC", difficulty, steps))?;
+        // }
+        // if let Some((difficulty, steps)) = &self.double_another {
+        //     serialize_struct.serialize_field("DOUBLE", &("ANOTHER", difficulty, steps))?;
+        // }
+        // if let Some((difficulty, steps)) = &self.double_maniac {
+        //     serialize_struct.serialize_field("DOUBLE", &("MANIAC", difficulty, steps))?;
+        // }
+        // if let Some((difficulty, steps)) = &self.double_s_maniac {
+        //     serialize_struct.serialize_field("DOUBLE", &("SMANIAC", difficulty, steps))?;
+        // }
+
+        // if let Some((difficulty, steps)) = &self.couple_basic {
+        //     serialize_struct.serialize_field("COUPLE", &("BASIC", difficulty, steps))?;
+        // }
+        // if let Some((difficulty, steps)) = &self.couple_another {
+        //     serialize_struct.serialize_field("COUPLE", &("ANOTHER", difficulty, steps))?;
+        // }
+        // if let Some((difficulty, steps)) = &self.couple_maniac {
+        //     serialize_struct.serialize_field("COUPLE", &("MANIAC", difficulty, steps))?;
+        // }
+        // if let Some((difficulty, steps)) = &self.couple_s_maniac {
+        //     serialize_struct.serialize_field("COUPLE", &("SMANIAC", difficulty, steps))?;
+        // }
+
+        // if let Some((difficulty, steps)) = &self.solo_basic {
+        //     serialize_struct.serialize_field("SOLO", &("BASIC", difficulty, steps))?;
+        // }
+        // if let Some((difficulty, steps)) = &self.solo_another {
+        //     serialize_struct.serialize_field("SOLO", &("ANOTHER", difficulty, steps))?;
+        // }
+        // if let Some((difficulty, steps)) = &self.solo_maniac {
+        //     serialize_struct.serialize_field("SOLO", &("MANIAC", difficulty, steps))?;
+        // }
+        // if let Some((difficulty, steps)) = &self.solo_s_maniac {
+        //     serialize_struct.serialize_field("SOLO", &("SMANIAC", difficulty, steps))?;
+        // }
+
+        serialize_struct.serialize_field("BACKGROUND", &self.background)?;
+        // An `#END` tag is used to denote the end of the `#BACKGROUND` tag.
+        serialize_struct.serialize_field("END", &())?;
+        serialize_struct.end()
+    }
 }
 
 #[cfg(test)]
