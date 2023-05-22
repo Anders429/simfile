@@ -13,7 +13,7 @@ keywords = ["stepmania", "simfile", "stepfile", "rhythm", "simulator"]
 
 [dependencies]
 ctrl-z = "0.1.0"
-msd = "0.3.0"
+msd = "0.4.0"
 serde = {version = "1.0.138", default-features = false}
 
 [dev-dependencies]
