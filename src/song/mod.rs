@@ -4,6 +4,7 @@
 //! simfile's original format. This allows for simfiles to be universally read and edited, as well
 //! as enabling easy transcoding between simfile formats.
 
+mod dwi;
 mod msd;
 mod util;
 
@@ -29,6 +30,8 @@ pub enum Error {
 pub enum Panel {
     None,
     Step,
+    HoldStart,
+    HoldEnd,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

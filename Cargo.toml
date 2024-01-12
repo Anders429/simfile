@@ -12,12 +12,13 @@ categories = ["data-structures", "encoding", "game-development", "parser-impleme
 keywords = ["stepmania", "simfile", "stepfile", "rhythm", "simulator"]
 
 [dependencies]
+arrayvec = "0.7.2"
 ctrl-z = "0.1.0"
-msd = "0.3.0"
+msd = "0.4.0"
 serde = {version = "1.0.138", default-features = false}
 
 [dev-dependencies]
-claim = {git = "https://github.com/Anders429/rust-claim"}
+claims = "0.7.1"
 more-asserts = "0.3.0"
 serde_test = "1.0.138"
 tempfile = "3.3.0"

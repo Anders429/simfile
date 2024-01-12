@@ -1,6 +1,6 @@
 //! Tests for reading simfiles.
 
-use claim::assert_ok;
+use claims::assert_ok;
 use std::fs::read_dir;
 
 #[test]

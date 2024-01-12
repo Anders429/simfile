@@ -2,7 +2,7 @@
 //!
 //! This is to ensure that songs written and then read do not lose any data.
 
-use claim::{assert_ok, assert_ok_eq};
+use claims::{assert_ok, assert_ok_eq};
 use std::fs::read_dir;
 use tempfile::tempdir;
 
