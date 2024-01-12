@@ -66,7 +66,69 @@ struct Panels<const PANELS: usize> {
     panels: [Panel; PANELS],
 }
 
-impl Panels<4> {
+trait AsSerializedBytes {
+    type Bytes: IntoIterator<Item = u8>;
+
+    fn as_serialized_bytes(&self) -> Self::Bytes;
+}
+
+macro_rules! new_single_byte {
+    ($byte:literal) => {{
+        let mut result = ArrayVec::new();
+        // SAFETY: The array has capacity for 9 bytes, so it can definitely hold this
+        // one.
+        unsafe { result.push_unchecked($byte) };
+        result
+    }};
+}
+
+/// SAFETY: Must be used to add exactly 4 bytes.
+macro_rules! new_four_byte {
+    ($bytes:literal) => {{
+        let mut result = ArrayVec::new();
+        // SAFETY: The array has capacity for 9 bytes, so it can definitely hold these
+        // 4.
+        unsafe { result.try_extend_from_slice($bytes).unwrap_unchecked() };
+        result
+    }};
+}
+
+/// SAFETY: Must be used to add exactly 5 bytes.
+macro_rules! new_five_byte {
+    ($bytes:literal) => {{
+        let mut result = ArrayVec::new();
+        // SAFETY: The array has capacity for 11 bytes, so it can definitely hold these
+        // 5.
+        unsafe { result.try_extend_from_slice($bytes).unwrap_unchecked() };
+        result
+    }};
+}
+
+/// SAFETY: Only use this to add up to 5 bytes.
+macro_rules! extend_hold {
+    ($result:ident, $bytes:literal) => {{
+        // SAFETY: The array has capacity for 9 bytes, with up to 4 already
+        // initialized, so it can definitely hold these 2 to 5.
+        unsafe { $result.try_extend_from_slice($bytes).unwrap_unchecked() };
+    }};
+}
+
+// Pattern alias.
+macro_rules! step {
+    () => {
+        Panel::Step | Panel::HoldStart | Panel::HoldEnd
+    };
+}
+
+macro_rules! non_hold_step {
+    () => {
+        Panel::None | Panel::Step | Panel::HoldEnd
+    };
+}
+
+impl AsSerializedBytes for Panels<4> {
+    type Bytes = ArrayVec<u8, 9>;
+
     /// Encodes this set of panels as an array of serialized bytes.
     ///
     /// This value will be a maximum of 9 bytes (for the case of a group of steps with a group of
@@ -75,50 +137,7 @@ impl Panels<4> {
     /// Note that the grouping here is done by trivially deciding the byte combinations to
     /// represent step groups. This means that groups will likely not be preserved when doing a
     /// round-trip deserializing and re-serializing.
-    fn as_serialized_bytes(&self) -> ArrayVec<u8, 9> {
-        macro_rules! new_single_byte {
-            ($byte:literal) => {{
-                let mut result = ArrayVec::<u8, 9>::new();
-                // SAFETY: The array has capacity for 9 bytes, so it can definitely hold this
-                // one.
-                unsafe { result.push_unchecked($byte) };
-                result
-            }};
-        }
-
-        /// SAFETY: Must be used to add exactly 4 bytes.
-        macro_rules! new_four_byte {
-            ($bytes:literal) => {{
-                let mut result = ArrayVec::<u8, 9>::new();
-                // SAFETY: The array has capacity for 9 bytes, so it can definitely hold these
-                // 4.
-                unsafe { result.try_extend_from_slice($bytes).unwrap_unchecked() };
-                result
-            }};
-        }
-
-        /// SAFETY: Only use this to add up to 5 bytes.
-        macro_rules! extend_hold {
-            ($result:ident, $bytes:literal) => {{
-                // SAFETY: The array has capacity for 9 bytes, with up to 4 already
-                // initialized, so it can definitely hold these 2 to 5.
-                unsafe { $result.try_extend_from_slice($bytes).unwrap_unchecked() };
-            }};
-        }
-
-        // Pattern alias.
-        macro_rules! step {
-            () => {
-                Panel::Step | Panel::HoldStart | Panel::HoldEnd
-            };
-        }
-
-        macro_rules! non_hold_step {
-            () => {
-                Panel::None | Panel::Step | Panel::HoldEnd
-            };
-        }
-
+    fn as_serialized_bytes(&self) -> Self::Bytes {
         let mut result = match self.panels {
             [Panel::None, Panel::None, Panel::None, Panel::None] => new_single_byte!(b'0'),
             [step!(), step!(), Panel::None, Panel::None] => {
@@ -219,7 +238,212 @@ impl Panels<4> {
 
         result
     }
+}
 
+impl AsSerializedBytes for Panels<6> {
+    type Bytes = ArrayVec<u8, 11>;
+
+    fn as_serialized_bytes(&self) -> Self::Bytes {
+        let mut result = match self.panels {
+            [Panel::None, Panel::None, Panel::None, Panel::None, Panel::None, Panel::None] => {
+                new_single_byte!(b'0')
+            }
+            [step!(), Panel::None, step!(), Panel::None, Panel::None, Panel::None] => {
+                new_single_byte!(b'1')
+            }
+            [Panel::None, Panel::None, step!(), Panel::None, Panel::None, Panel::None] => {
+                new_single_byte!(b'2')
+            }
+            [Panel::None, Panel::None, step!(), Panel::None, Panel::None, step!()] => {
+                new_single_byte!(b'3')
+            }
+            [step!(), Panel::None, Panel::None, Panel::None, Panel::None, Panel::None] => {
+                new_single_byte!(b'4')
+            }
+            [Panel::None, Panel::None, Panel::None, Panel::None, Panel::None, step!()] => {
+                new_single_byte!(b'6')
+            }
+            [step!(), Panel::None, Panel::None, step!(), Panel::None, Panel::None] => {
+                new_single_byte!(b'7')
+            }
+            [Panel::None, Panel::None, Panel::None, step!(), Panel::None, Panel::None] => {
+                new_single_byte!(b'8')
+            }
+            [Panel::None, Panel::None, Panel::None, step!(), Panel::None, step!()] => {
+                new_single_byte!(b'9')
+            }
+            [Panel::None, Panel::None, step!(), step!(), Panel::None, Panel::None] => {
+                new_single_byte!(b'A')
+            }
+            [step!(), Panel::None, Panel::None, Panel::None, Panel::None, step!()] => {
+                new_single_byte!(b'B')
+            }
+            [Panel::None, step!(), Panel::None, Panel::None, Panel::None, Panel::None] => {
+                new_single_byte!(b'C')
+            }
+            [Panel::None, Panel::None, Panel::None, Panel::None, step!(), Panel::None] => {
+                new_single_byte!(b'D')
+            }
+            [step!(), step!(), Panel::None, Panel::None, Panel::None, Panel::None] => {
+                new_single_byte!(b'E')
+            }
+            [Panel::None, step!(), step!(), Panel::None, Panel::None, Panel::None] => {
+                new_single_byte!(b'F')
+            }
+            [Panel::None, step!(), Panel::None, step!(), Panel::None, Panel::None] => {
+                new_single_byte!(b'G')
+            }
+            [Panel::None, step!(), Panel::None, Panel::None, Panel::None, step!()] => {
+                new_single_byte!(b'H')
+            }
+            [step!(), Panel::None, Panel::None, Panel::None, step!(), Panel::None] => {
+                new_single_byte!(b'I')
+            }
+            [Panel::None, Panel::None, step!(), Panel::None, step!(), Panel::None] => {
+                new_single_byte!(b'J')
+            }
+            [Panel::None, Panel::None, Panel::None, step!(), step!(), Panel::None] => {
+                new_single_byte!(b'K')
+            }
+            [Panel::None, Panel::None, Panel::None, Panel::None, step!(), step!()] => {
+                new_single_byte!(b'L')
+            }
+            [Panel::None, step!(), Panel::None, Panel::None, step!(), Panel::None] => {
+                new_single_byte!(b'M')
+            }
+            [step!(), step!(), step!(), Panel::None, Panel::None, Panel::None] => {
+                new_four_byte!(b"<E2>")
+            }
+            [step!(), step!(), Panel::None, step!(), Panel::None, Panel::None] => {
+                new_four_byte!(b"<E8>")
+            }
+            [step!(), step!(), Panel::None, Panel::None, step!(), Panel::None] => {
+                new_four_byte!(b"<ED>")
+            }
+            [step!(), step!(), Panel::None, Panel::None, Panel::None, step!()] => {
+                new_four_byte!(b"<E6>")
+            }
+            [step!(), Panel::None, step!(), step!(), Panel::None, Panel::None] => {
+                new_four_byte!(b"<18>")
+            }
+            [step!(), Panel::None, step!(), Panel::None, step!(), Panel::None] => {
+                new_four_byte!(b"<1D>")
+            }
+            [step!(), Panel::None, step!(), Panel::None, Panel::None, step!()] => {
+                new_four_byte!(b"<16>")
+            }
+            [step!(), Panel::None, Panel::None, step!(), step!(), Panel::None] => {
+                new_four_byte!(b"<7D>")
+            }
+            [step!(), Panel::None, Panel::None, step!(), Panel::None, step!()] => {
+                new_four_byte!(b"<76>")
+            }
+            [step!(), Panel::None, Panel::None, Panel::None, step!(), step!()] => {
+                new_four_byte!(b"<I6>")
+            }
+            [Panel::None, step!(), step!(), step!(), Panel::None, Panel::None] => {
+                new_four_byte!(b"<F8>")
+            }
+            [Panel::None, step!(), step!(), Panel::None, step!(), Panel::None] => {
+                new_four_byte!(b"<FD>")
+            }
+            [Panel::None, step!(), step!(), Panel::None, Panel::None, step!()] => {
+                new_four_byte!(b"<F6>")
+            }
+            [Panel::None, step!(), Panel::None, step!(), step!(), Panel::None] => {
+                new_four_byte!(b"<GD>")
+            }
+            [Panel::None, step!(), Panel::None, step!(), Panel::None, step!()] => {
+                new_four_byte!(b"<G6>")
+            }
+            [Panel::None, step!(), Panel::None, Panel::None, step!(), step!()] => {
+                new_four_byte!(b"<M6>")
+            }
+            [Panel::None, Panel::None, step!(), step!(), step!(), Panel::None] => {
+                new_four_byte!(b"<AD>")
+            }
+            [Panel::None, Panel::None, step!(), step!(), Panel::None, step!()] => {
+                new_four_byte!(b"<A6>")
+            }
+            [Panel::None, Panel::None, step!(), Panel::None, step!(), step!()] => {
+                new_four_byte!(b"<J6>")
+            }
+            [Panel::None, Panel::None, Panel::None, step!(), step!(), step!()] => {
+                new_four_byte!(b"<K6>")
+            }
+            [step!(), step!(), step!(), step!(), Panel::None, Panel::None] => {
+                new_four_byte!(b"<EA>")
+            }
+            [step!(), step!(), step!(), Panel::None, step!(), Panel::None] => {
+                new_four_byte!(b"<EJ>")
+            }
+            [step!(), step!(), step!(), Panel::None, Panel::None, step!()] => {
+                new_four_byte!(b"<E3>")
+            }
+            [step!(), step!(), Panel::None, step!(), step!(), Panel::None] => {
+                new_four_byte!(b"<EK>")
+            }
+            [step!(), step!(), Panel::None, step!(), Panel::None, step!()] => {
+                new_four_byte!(b"<E9>")
+            }
+            [step!(), step!(), Panel::None, Panel::None, step!(), step!()] => {
+                new_four_byte!(b"<EL>")
+            }
+            [step!(), Panel::None, step!(), step!(), step!(), Panel::None] => {
+                new_four_byte!(b"<1K>")
+            }
+            [step!(), Panel::None, step!(), step!(), Panel::None, step!()] => {
+                new_four_byte!(b"<19>")
+            }
+            [step!(), Panel::None, step!(), Panel::None, step!(), step!()] => {
+                new_four_byte!(b"<1L>")
+            }
+            [step!(), Panel::None, Panel::None, step!(), step!(), step!()] => {
+                new_four_byte!(b"<7L>")
+            }
+            [Panel::None, step!(), step!(), step!(), step!(), Panel::None] => {
+                new_four_byte!(b"<FK>")
+            }
+            [Panel::None, step!(), step!(), step!(), Panel::None, step!()] => {
+                new_four_byte!(b"<F9>")
+            }
+            [Panel::None, step!(), step!(), Panel::None, step!(), step!()] => {
+                new_four_byte!(b"<FL>")
+            }
+            [Panel::None, step!(), Panel::None, step!(), step!(), step!()] => {
+                new_four_byte!(b"<GL>")
+            }
+            [Panel::None, Panel::None, step!(), step!(), step!(), step!()] => {
+                new_four_byte!(b"<GL>")
+            }
+            [step!(), step!(), step!(), step!(), step!(), Panel::None] => {
+                new_five_byte!(b"<EAD>")
+            }
+            [step!(), step!(), step!(), step!(), Panel::None, step!()] => {
+                new_five_byte!(b"<EA6>")
+            }
+            [step!(), step!(), step!(), Panel::None, step!(), step!()] => {
+                new_five_byte!(b"<EJ6>")
+            }
+            [step!(), step!(), Panel::None, step!(), step!(), step!()] => {
+                new_five_byte!(b"<EK6>")
+            }
+            [step!(), Panel::None, step!(), step!(), step!(), step!()] => {
+                new_five_byte!(b"<1K6>")
+            }
+            [Panel::None, step!(), step!(), step!(), step!(), step!()] => {
+                new_five_byte!(b"<FK6>")
+            }
+            [step!(), step!(), step!(), step!(), step!(), step!()] => {
+                new_five_byte!(b"<EAL>")
+            }
+        };
+
+        result
+    }
+}
+
+impl Panels<4> {
     /// Deserializes the given byte as a step, respecting and updating the current holds.
     ///
     /// If a hold exists on a panel, then the hold is removed and a `HoldEnd` is placed in that
@@ -523,7 +747,10 @@ struct Step<const PANELS: usize> {
     duration: Duration,
 }
 
-impl Step<4> {
+impl<const PANELS: usize> Step<PANELS>
+where
+    Panels<PANELS>: AsSerializedBytes,
+{
     /// Serializes the current step, respecting the previously-serialized duration.
     fn serialize_to_bytes(&self, bytes: &mut Vec<u8>, previous: Option<Duration>) {
         match self.duration {
@@ -604,7 +831,10 @@ struct Steps<const PANELS: usize> {
     steps: Vec<Step<PANELS>>,
 }
 
-impl Serialize for Steps<4> {
+impl<const PANELS: usize> Serialize for Steps<PANELS>
+where
+    Panels<PANELS>: AsSerializedBytes,
+{
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -1242,18 +1472,18 @@ impl Serialize for Song {
         //     serialize_struct.serialize_field("COUPLE", &("SMANIAC", difficulty, steps))?;
         // }
 
-        // if let Some((difficulty, steps)) = &self.solo_basic {
-        //     serialize_struct.serialize_field("SOLO", &("BASIC", difficulty, steps))?;
-        // }
-        // if let Some((difficulty, steps)) = &self.solo_another {
-        //     serialize_struct.serialize_field("SOLO", &("ANOTHER", difficulty, steps))?;
-        // }
-        // if let Some((difficulty, steps)) = &self.solo_maniac {
-        //     serialize_struct.serialize_field("SOLO", &("MANIAC", difficulty, steps))?;
-        // }
-        // if let Some((difficulty, steps)) = &self.solo_s_maniac {
-        //     serialize_struct.serialize_field("SOLO", &("SMANIAC", difficulty, steps))?;
-        // }
+        if let Some((difficulty, steps)) = &self.solo_basic {
+            serialize_struct.serialize_field("SOLO", &("BASIC", difficulty, steps))?;
+        }
+        if let Some((difficulty, steps)) = &self.solo_another {
+            serialize_struct.serialize_field("SOLO", &("ANOTHER", difficulty, steps))?;
+        }
+        if let Some((difficulty, steps)) = &self.solo_maniac {
+            serialize_struct.serialize_field("SOLO", &("MANIAC", difficulty, steps))?;
+        }
+        if let Some((difficulty, steps)) = &self.solo_s_maniac {
+            serialize_struct.serialize_field("SOLO", &("SMANIAC", difficulty, steps))?;
+        }
 
         serialize_struct.serialize_field("BACKGROUND", &self.background)?;
         // An `#END` tag is used to denote the end of the `#BACKGROUND` tag.
